@@ -1,6 +1,6 @@
 # GreenSpore Farms
 
-A responsive static website for the proposed GreenSpore Farms mushroom-cultivation pilot near Kanipakam, Andhra Pradesh. The site has separate About, Our Mushrooms, and Business Plan pages, plus the facility plan and project roadmap on the home page.
+A responsive website for the proposed GreenSpore Farms mushroom-cultivation pilot near Kanipakam, Andhra Pradesh. Existing pages remain static HTML; the new Infrastructure Plan is built with React and Vite.
 
 ## Run locally
 
@@ -8,7 +8,15 @@ A responsive static website for the proposed GreenSpore Farms mushroom-cultivati
 npm start
 ```
 
-This runs `serve` through `npx`; if prompted, allow the one-time temporary download. Open the address shown in the terminal.
+This starts the Vite development server. Open the infrastructure plan at the address shown in the terminal plus `/GreenSpore-FARMS/infrastructure.html`.
+
+## Build
+
+```bash
+npm run build
+```
+
+The Vite build outputs the React infrastructure page and the existing static pages to `dist/`. GitHub Pages deploys this generated folder from the `main` branch.
 
 ## Validate
 
@@ -23,11 +31,12 @@ npm test
 - `about.html` — project overview
 - `mushrooms.html` — Oyster and Milky crop profiles
 - `business-plan.html` — first-harvest and infrastructure estimates
+- `infrastructure.html` — React-powered facility, construction, equipment and BOQ plan
 - `assets/greenspore-logo.png` — supplied GreenSpore Farms badge
-- `assets/facility-floor-plan.png` — supplied conceptual 20 × 40 ft floor plan
+- `assets/facility-layout-concept.svg` — preliminary 20 × 40 ft area schedule and concept layout
 
 ## Deployment
 
-The documents provide planning estimates, not supplier quotations or guaranteed outcomes. The floor plan is conceptual and must not be used as a certified construction drawing. Validate crop assumptions, costs, buyers, local rules, and professional design requirements before investment.
+The GitHub Actions workflow runs `npm ci`, `npm test` and `npm run build`, then deploys `dist/` to GitHub Pages when changes are pushed to `main`. Vite is configured for the repository Pages path.
 
-Because this is static HTML/CSS/JS, it can be deployed directly to GitHub Pages, Netlify, or Vercel without a build command. For GitHub Pages, publish from the repository root on the desired branch.
+The site remains static after the Vite build; no application server or database is required. Infrastructure costs and technical details are planning assumptions, not supplier quotations or certified construction guidance. Validate the layout and requirements with local professionals before construction or procurement.

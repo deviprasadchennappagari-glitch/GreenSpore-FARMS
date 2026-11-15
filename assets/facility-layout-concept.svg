@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 920" role="img" aria-labelledby="title description">
+  <title id="title">Conceptual 20 by 40 foot GreenSpore Farms room layout</title>
+  <desc id="description">Fourteen functional zones in a conceptual 800 square foot plan, including separate crop rooms and a three foot service passage. Dimensions are preliminary planning allowances.</desc>
+  <style>
+    text { font-family: Arial, sans-serif; fill: #1b2c22; }
+    .label { font-size: 15px; font-weight: 700; text-anchor: middle; }
+    .size { font-size: 12px; text-anchor: middle; }
+    .note { font-size: 11px; fill: #617166; text-anchor: middle; }
+  </style>
+  <text x="230" y="22" class="label">CONCEPT ONLY · 20 ft × 40 ft · 800 sq ft</text>
+  <rect x="30" y="40" width="400" height="800" fill="#fffdf8" stroke="#143d2b" stroke-width="4" />
+
+  <rect x="32" y="42" width="336" height="116" fill="#eee3ce" stroke="#143d2b" stroke-width="2" />
+  <text x="200" y="92" class="label"><tspan x="200">RAW STRAW STORAGE</tspan><tspan x="200" dy="21" class="size">17 ft × 6 ft · 102 sq ft</tspan><tspan x="200" dy="19" class="note">Dry, raised, pest-protected</tspan></text>
+
+  <rect x="32" y="158" width="196" height="116" fill="#e9eadb" stroke="#143d2b" stroke-width="2" />
+  <text x="130" y="202" class="label"><tspan x="130">SUBSTRATE PREP</tspan><tspan x="130" dy="20" class="size">10 ft × 6 ft · 60 sq ft</tspan><tspan x="130" dy="18" class="note">Cutting / mixing</tspan></text>
+  <rect x="228" y="158" width="140" height="116" fill="#dbe5cd" stroke="#143d2b" stroke-width="2" />
+  <text x="298" y="200" class="label"><tspan x="298">SOAK /</tspan><tspan x="298" dy="18">PASTEURIZE</tspan><tspan x="298" dy="20" class="size">7 ft × 6 ft</tspan><tspan x="298" dy="16" class="note">42 sq ft</tspan></text>
+
+  <rect x="32" y="274" width="196" height="76" fill="#f8f3e8" stroke="#143d2b" stroke-width="2" />
+  <text x="130" y="302" class="label"><tspan x="130">CLEAN INOCULATION</tspan><tspan x="130" dy="20" class="size">10 ft × 4 ft · 40 sq ft</tspan></text>
+  <rect x="228" y="274" width="140" height="76" fill="#dbe5cd" stroke="#143d2b" stroke-width="2" />
+  <text x="298" y="299" class="label"><tspan x="298">WASH /</tspan><tspan x="298" dy="18">SANITATION</tspan><tspan x="298" dy="18" class="size">7 ft × 4 ft · 28 sq ft</tspan></text>
+
+  <rect x="32" y="350" width="168" height="116" fill="#e9eadb" stroke="#143d2b" stroke-width="2" />
+  <text x="116" y="394" class="label"><tspan x="116">OYSTER</tspan><tspan x="116" dy="20">INCUBATION</tspan><tspan x="116" dy="20" class="size">8.5 ft × 6 ft · 51 sq ft</tspan></text>
+  <rect x="200" y="350" width="168" height="116" fill="#e9eadb" stroke="#143d2b" stroke-width="2" />
+  <text x="284" y="394" class="label"><tspan x="284">MILKY</tspan><tspan x="284" dy="20">INCUBATION</tspan><tspan x="284" dy="20" class="size">8.5 ft × 6 ft · 51 sq ft</tspan></text>
+
+  <rect x="32" y="466" width="168" height="136" fill="#dbe5cd" stroke="#143d2b" stroke-width="2" />
+  <text x="116" y="520" class="label"><tspan x="116">OYSTER</tspan><tspan x="116" dy="20">FRUITING</tspan><tspan x="116" dy="20" class="size">8.5 ft × 7 ft</tspan><tspan x="116" dy="17" class="note">59.5 sq ft</tspan></text>
+  <rect x="200" y="466" width="168" height="136" fill="#f0dba9" stroke="#143d2b" stroke-width="2" />
+  <text x="284" y="520" class="label"><tspan x="284">MILKY</tspan><tspan x="284" dy="20">FRUITING</tspan><tspan x="284" dy="20" class="size">8.5 ft × 7 ft</tspan><tspan x="284" dy="17" class="note">59.5 sq ft</tspan></text>
+
+  <rect x="32" y="602" width="168" height="116" fill="#f0dba9" stroke="#143d2b" stroke-width="2" />
+  <text x="116" y="644" class="label"><tspan x="116">CASING PREP /</tspan><tspan x="116" dy="19">STORAGE</tspan><tspan x="116" dy="20" class="size">8.5 ft × 6 ft · 51 sq ft</tspan></text>
+  <rect x="200" y="602" width="168" height="116" fill="#eee3ce" stroke="#143d2b" stroke-width="2" />
+  <text x="284" y="644" class="label"><tspan x="284">UTILITY /</tspan><tspan x="284" dy="19">EQUIPMENT</tspan><tspan x="284" dy="20" class="size">8.5 ft × 6 ft · 51 sq ft</tspan></text>
+
+  <rect x="32" y="718" width="196" height="120" fill="#f8f3e8" stroke="#143d2b" stroke-width="2" />
+  <text x="130" y="764" class="label"><tspan x="130">PACK / GRADE</tspan><tspan x="130" dy="20" class="size">10 ft × 5 ft · 50 sq ft</tspan><tspan x="130" dy="19" class="note">Clean post-harvest zone</tspan></text>
+  <rect x="228" y="718" width="140" height="120" fill="#f8f3e8" stroke="#143d2b" stroke-width="2" />
+  <text x="298" y="758" class="label"><tspan x="298">FINISHED</tspan><tspan x="298" dy="19">TEMP STORE</tspan><tspan x="298" dy="19" class="size">7 ft × 5 ft</tspan><tspan x="298" dy="16" class="note">35 sq ft</tspan></text>
+
+  <rect x="368" y="42" width="60" height="796" fill="#e9eadb" stroke="#143d2b" stroke-width="2" />
+  <text x="398" y="442" class="label" transform="rotate(-90 398 442)">SERVICE PASSAGE · 3 ft × 40 ft · 120 sq ft</text>
+  <path d="M398 814 V846 M388 836 L398 846 L408 836" fill="none" stroke="#bd8b38" stroke-width="4" />
+  <text x="398" y="868" class="size">MAIN ENTRY</text>
+
+  <path d="M368 100 h18 M368 216 h18 M368 312 h18 M368 408 h18 M368 534 h18 M368 660 h18 M368 778 h18" stroke="#bd8b38" stroke-width="5" />
+  <path d="M30 520 h16 M30 560 h16 M30 190 h16" stroke="#24543c" stroke-width="4" />
+  <circle cx="345" cy="248" r="6" fill="#578ca1" />
+  <circle cx="344" cy="332" r="6" fill="#578ca1" />
+  <circle cx="188" cy="590" r="6" fill="#578ca1" />
+  <circle cx="350" cy="590" r="6" fill="#578ca1" />
+  <text x="230" y="888" class="note">Gold ticks: conceptual access · Green ticks: ventilation candidates</text>
+  <text x="230" y="908" class="note">Blue dots: candidate drains; final door, ventilation and MEP layout requires review</text>
+</svg>

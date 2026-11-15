@@ -428,7 +428,7 @@ tbody td { color: #405345; }
 
 @media (max-width: 900px) {
   .site-header { gap: 16px; }
-  .site-nav { gap: 14px; font-size: .83rem; }
+  .site-nav { gap: 14px; font-size: .83rem; flex-wrap: wrap; justify-content: flex-end; }
   .infrastructure { gap: 36px; }
   .hero { gap: 36px; }
 }
