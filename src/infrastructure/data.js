@@ -8,20 +8,20 @@ export const projectDetails = {
 };
 
 export const layoutRooms = [
-  { room: "Raw paddy straw storage", length: 17, width: 6, area: 102, flow: "Raw / dry zone" },
-  { room: "Straw cutting and substrate preparation", length: 10, width: 6, area: 60, flow: "Raw / wet zone" },
-  { room: "Soaking and pasteurisation", length: 7, width: 6, area: 42, flow: "Raw / wet zone" },
-  { room: "Clean inoculation and bag filling", length: 10, width: 4, area: 40, flow: "Clean zone" },
-  { room: "Washing and sanitation", length: 7, width: 4, area: 28, flow: "Wet service zone" },
-  { room: "Oyster incubation", length: 8.5, width: 6, area: 51, flow: "Crop-specific clean zone" },
-  { room: "Milky incubation", length: 8.5, width: 6, area: 51, flow: "Crop-specific clean zone" },
-  { room: "Oyster fruiting", length: 8.5, width: 7, area: 59.5, flow: "Crop-specific humid zone" },
-  { room: "Milky fruiting", length: 8.5, width: 7, area: 59.5, flow: "Crop-specific humid zone" },
-  { room: "Milky casing preparation and storage", length: 8.5, width: 6, area: 51, flow: "Crop-specific clean zone" },
-  { room: "Utility and equipment", length: 8.5, width: 6, area: 51, flow: "Service zone" },
-  { room: "Packing and grading", length: 10, width: 5, area: 50, flow: "Clean post-harvest zone" },
-  { room: "Finished product temporary storage", length: 7, width: 5, area: 35, flow: "Clean post-harvest zone" },
-  { room: "Internal service passage", length: 40, width: 3, area: 120, flow: "Access / circulation" },
+  { id: "raw-straw", room: "Raw straw storage", length: 17, width: 6, area: 102, flow: "Raw / dry zone", purpose: "Keep paddy straw dry, raised and pest protected." },
+  { id: "substrate-prep", room: "Substrate preparation", length: 10, width: 6, area: 60, flow: "Raw / wet zone", purpose: "Cut, weigh and stage paddy straw for processing." },
+  { id: "soak-pasteurisation", room: "Soak / pasteurisation", length: 7, width: 6, area: 42, flow: "Raw / wet zone", purpose: "Soak and treat substrate using the validated process." },
+  { id: "clean-inoculation", room: "Clean inoculation", length: 10, width: 4, area: 40, flow: "Clean zone", purpose: "Inoculate and fill bags with clean tools and workflow." },
+  { id: "wash-sanitation", room: "Wash / sanitation", length: 7, width: 4, area: 28, flow: "Wet service zone", purpose: "Wash equipment and support hygiene without wetting clean zones." },
+  { id: "oyster-incubation", room: "Oyster incubation", length: 8.5, width: 6, area: 51, flow: "Crop-specific clean zone", purpose: "Incubate Oyster bags under the selected strain protocol." },
+  { id: "milky-incubation", room: "Milky incubation", length: 8.5, width: 6, area: 51, flow: "Crop-specific clean zone", purpose: "Incubate Milky bags under a separate crop protocol." },
+  { id: "oyster-fruiting", room: "Oyster fruiting", length: 8.5, width: 7, area: 59.5, flow: "Crop-specific humid zone", purpose: "Manage Oyster fruiting, fresh air and humidity." },
+  { id: "milky-fruiting", room: "Milky fruiting", length: 8.5, width: 7, area: 59.5, flow: "Crop-specific humid zone", purpose: "Manage Milky fruiting and casing workflow separately." },
+  { id: "casing-preparation", room: "Casing preparation / storage", length: 8.5, width: 6, area: 51, flow: "Crop-specific clean zone", purpose: "Prepare and store casing materials for the Milky process." },
+  { id: "utility-equipment", room: "Utility / equipment", length: 8.5, width: 6, area: 51, flow: "Service zone", purpose: "Locate service equipment in a protected, serviceable space." },
+  { id: "packing-grading", room: "Packing / grading", length: 10, width: 5, area: 50, flow: "Clean post-harvest zone", purpose: "Grade, weigh and pack harvested mushrooms." },
+  { id: "finished-storage", room: "Finished product storage", length: 7, width: 5, area: 35, flow: "Clean post-harvest zone", purpose: "Short-term clean holding before dispatch." },
+  { id: "service-passage", room: "Service passage", length: 40, width: 3, area: 120, flow: "Access / circulation", purpose: "Provide access and controlled movement through the facility." },
 ];
 
 export const existingBudget = [

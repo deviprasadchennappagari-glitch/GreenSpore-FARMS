@@ -24,9 +24,7 @@ The Vite build outputs the React infrastructure page and the existing static pag
 npm test
 ```
 
-The infrastructure plan includes itemized civil/equipment scopes, a measured roof-area calculator, room and environmental equipment schedules, and a three-supplier quote tracker. Cost averages use only complete, current written quotes; unverified prices remain "Quotation Required". The original budget baseline is preserved until the founders approve and reconcile a scope.
-
-Quote data is saved in the current browser and can be shared with founders through tracker JSON export/import. Importing replaces the current browser's tracker; export local data first. GitHub Pages does not provide live shared storage.
+The infrastructure plan includes an editable room layout, itemized construction and cultivation costs, roof comparisons, and separate initial and monthly estimates. Minimum and maximum unit prices are editable; averages and totals are calculated from entered prices and quantities. Unverified prices remain unfilled until checked locally. Planner values are saved in the current browser; GitHub Pages does not provide live shared storage.
 
 ## Site pages and assets
 
@@ -35,7 +33,7 @@ Quote data is saved in the current browser and can be shared with founders throu
 - `about.html` — project overview
 - `mushrooms.html` — Oyster and Milky crop profiles
 - `business-plan.html` — first-harvest and infrastructure estimates
-- `infrastructure.html` — React-powered facility, construction, equipment and BOQ plan
+- `infrastructure.html` — React-powered, editable farm investment planner
 - `assets/greenspore-logo.png` — supplied GreenSpore Farms badge
 - `assets/facility-layout-concept.svg` — preliminary 20 × 40 ft area schedule and concept layout
 

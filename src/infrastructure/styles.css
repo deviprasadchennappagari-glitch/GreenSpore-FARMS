@@ -315,6 +315,128 @@
   .budget-cards { grid-template-columns: repeat(2, 1fr); }
 }
 
+.investment-planner-page .infra-hero { min-height: 360px; }
+.investment-summary {
+  max-width: 1184px;
+  margin: 0 auto;
+  padding: 46px 24px 30px;
+  scroll-margin-top: 70px;
+}
+.planner-section-heading { max-width: 850px; }
+.planner-section-heading h2 { margin: 0 0 12px; color: var(--green); font: 700 clamp(1.9rem, 3vw, 2.7rem) "Playfair Display", serif; }
+.planner-section-heading .lead { color: var(--muted); }
+.planner-budget-cards article { min-height: 138px; }
+.planner-budget-cards strong { font-size: 1.15rem; }
+.planner-budget-cards small { display: block; margin-top: 8px; color: #e0e8dd; }
+.summary-table table { min-width: 760px; }
+.planner-summary-controls {
+  display: flex;
+  align-items: end;
+  gap: 20px;
+  margin: 18px 0 0;
+  padding: 16px 18px;
+  border-left: 4px solid var(--gold);
+  background: #fff;
+}
+.planner-summary-controls > p { margin: 0 0 4px; color: var(--muted); font-size: .86rem; }
+.planner-summary-controls .planner-input { max-width: 250px; }
+.planner-save-status { max-width: 1136px; margin: 0 auto; padding: 0 24px 14px; color: var(--muted); font-size: .78rem; }
+.concept-disclaimer {
+  margin: 0 0 18px;
+  padding: 12px 15px;
+  border-left: 4px solid var(--gold);
+  background: #fff;
+  color: var(--green);
+  font-weight: 700;
+}
+.planner-layout-grid { grid-template-columns: minmax(0, 1.15fr) minmax(270px, .85fr); }
+.planner-layout-figure { min-width: 0; }
+.concept-plan-svg { display: block; width: 100%; max-height: 900px; }
+.concept-plan-label { fill: #1b2c22; font: 700 11px Arial, sans-serif; }
+.concept-plan-size { fill: #617166; font: 10px Arial, sans-serif; }
+.planner-layout-summary h3, .planner-assumptions h3, .production-assumptions h3,
+.straw-valuation h3 { margin-top: 0; color: var(--green); font: 700 1.3rem "Playfair Display", serif; }
+.area-metrics { margin: 18px 0; }
+.area-metrics > div { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.area-metrics dt { color: var(--muted); font-size: .84rem; }
+.area-metrics dd { margin: 0; color: var(--green); font-weight: 700; text-align: right; }
+.planner-input { display: grid; gap: 5px; min-width: 0; color: var(--green); font-size: .78rem; font-weight: 700; }
+.planner-input input, .planner-input select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 8px;
+  color: var(--ink);
+  background: white;
+  font: inherit;
+}
+.planner-table-wrap table { min-width: 1180px; }
+.planner-table-wrap th { white-space: normal; }
+.planner-table-wrap td { vertical-align: top; min-width: 115px; }
+.planner-cost-table table { min-width: 1480px; }
+.planner-cost-table td:first-child { min-width: 255px; }
+.planner-cost-table td small { display: block; max-width: 300px; margin-top: 5px; color: var(--muted); font-size: .76rem; font-weight: 400; }
+.table-input {
+  width: 125px;
+  min-width: 92px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 7px;
+  color: var(--ink);
+  background: #fff;
+  font: inherit;
+  font-size: .78rem;
+}
+.planner-cost-table td:nth-child(4), .planner-cost-table td:nth-child(6) { min-width: 190px; }
+.pending-value { color: #8d5a25; font-size: .78rem; }
+.planner-assumptions { margin: 14px; }
+.planner-assumptions > p, .production-assumptions > p,
+.straw-valuation > p { color: var(--muted); font-size: .86rem; }
+.roof-select-input { max-width: 400px; margin-top: 14px; }
+.roof-comparison-table table { min-width: 1650px; }
+.roof-comparison-table td:first-child { min-width: 235px; }
+.reconciliation-note { margin: 18px; }
+.prep-method-control {
+  display: flex;
+  align-items: end;
+  gap: 16px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.prep-method-control label { display: grid; gap: 5px; min-width: 260px; color: var(--green); font-size: .8rem; font-weight: 700; }
+.prep-method-control select { padding: 8px; border: 1px solid var(--line); background: white; font: inherit; }
+.prep-method-control p { margin: 0 0 4px; color: var(--muted); font-size: .83rem; }
+.production-assumptions, .straw-valuation {
+  margin: 20px 0;
+  padding: 20px;
+  border: 1px solid var(--line);
+  background: #fff;
+}
+.production-assumptions .assumption-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.straw-valuation { border-left: 4px solid var(--gold); }
+.resource-table table { min-width: 1330px; }
+.resource-table input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--green); }
+.range-edit { display: grid; grid-template-columns: repeat(2, minmax(95px, 1fr)); gap: 6px; min-width: 210px; }
+.range-edit .table-input { width: 100%; min-width: 0; }
+.operating-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 28px 0 14px; }
+.operating-metrics article { display: grid; gap: 7px; padding: 18px; border: 1px solid var(--line); background: #fff; }
+.operating-metrics span { color: var(--muted); font-size: .8rem; }
+.operating-metrics strong { color: var(--green); font: 700 1.25rem "Playfair Display", serif; }
+.operating-metrics small { color: var(--muted); }
+.monthly-harvest-input { display: flex; align-items: end; gap: 18px; }
+.monthly-harvest-input .planner-input { max-width: 280px; }
+.monthly-harvest-input p { margin: 0 0 4px; color: var(--muted); font-size: .82rem; }
+
+@media (max-width: 760px) {
+  .investment-summary { padding: 36px 20px 20px; }
+  .planner-summary-controls, .prep-method-control, .monthly-harvest-input { align-items: stretch; flex-direction: column; }
+  .planner-summary-controls .planner-input, .prep-method-control label, .monthly-harvest-input .planner-input { max-width: none; }
+  .production-assumptions .assumption-grid, .operating-metrics { grid-template-columns: 1fr; }
+  .area-metrics > div { flex-direction: column; }
+  .area-metrics dd { text-align: left; }
+}
+
 @media print {
   .site-header, .plan-nav, .infra-hero-actions, .menu-toggle { display: none !important; }
   .infra-hero, .infra-section, .infra-disclaimer { padding: 24px 0; }

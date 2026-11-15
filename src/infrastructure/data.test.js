@@ -12,12 +12,24 @@ import {
 } from "./calculations.js";
 import { roomEquipmentSchedule, roofingOptions } from "./detail-data.js";
 import { allCostItems, constructionAssumptionsDefaults, constructionGroups } from "./construction-data.js";
+import {
+  calculateContingency,
+  calculateCostPerKg,
+  calculateGrowingBagCount,
+  calculateInitialInvestment,
+  calculatePlannerItem,
+  calculatePaddyStrawBalance,
+  calculateRoomLayout,
+  calculateSpawnQuantity,
+  sumPlannerItems,
+} from "./investment-calculations.js";
+import { allPlannerItems, planRows, resourceRows, roofOptions as plannerRoofOptions } from "./planner-data.js";
 
 test("the conceptual room schedule fits the stated 800 sq ft plot exactly", () => {
   const scheduledArea = layoutRooms.reduce((total, room) => total + room.area, 0);
 
   assert.equal(scheduledArea, projectDetails.plotArea);
-  assert.equal(layoutRooms.find((room) => room.room === "Internal service passage").area, 120);
+  assert.equal(layoutRooms.find((room) => room.room === "Service passage").area, 120);
 });
 
 test("the existing budget baseline arithmetic remains unchanged", () => {
@@ -221,4 +233,87 @@ test("labour estimation supports daily wages or an exclusive activity contract",
     minimumRate: "600", maximumRate: "900", workers: "2", days: "3",
     method: "contract", contractRate: "50", contractQuantity: "10",
   }), 500);
+});
+
+test("planner item costs and category totals use entered average rates and quantities", () => {
+  assert.deepEqual(calculatePlannerItem("10", "20", "3"), {
+    minimum: 30,
+    average: 45,
+    maximum: 60,
+    minimumUnit: 10,
+    averageUnit: 15,
+    maximumUnit: 20,
+    quantity: 3,
+    complete: true,
+  });
+  assert.equal(calculatePlannerItem("", "", "3").average, null);
+  const total = sumPlannerItems([
+    { estimate: calculatePlannerItem("10", "20", "3") },
+    { estimate: calculatePlannerItem("5", "5", "2") },
+  ]);
+  assert.deepEqual([total.minimum, total.average, total.maximum], [40, 55, 70]);
+  assert.equal(total.complete, true);
+});
+
+test("initial investment adds construction, equipment, batch and contingency but excludes monthly costs", () => {
+  const construction = calculatePlannerItem("100", "120", "1");
+  const equipment = calculatePlannerItem("40", "60", "1");
+  const production = calculatePlannerItem("20", "30", "1");
+  const contingency = {
+    minimum: 16,
+    average: 18.5,
+    maximum: 21,
+    complete: true,
+  };
+  const initial = calculateInitialInvestment(construction, equipment, production, contingency);
+  assert.deepEqual([initial.minimum, initial.average, initial.maximum], [176, 203.5, 231]);
+  assert.deepEqual(calculateContingency(construction, equipment, production, "10"), {
+    minimum: 16,
+    average: 18.5,
+    maximum: 21,
+    complete: true,
+  });
+  assert.equal(calculateInitialInvestment(construction, equipment, production, {
+    minimum: null, average: null, maximum: null, complete: false,
+  }).complete, false);
+});
+
+test("spawn, bag count and purchased paddy straw are derived from editable cultivation inputs", () => {
+  assert.equal(calculateSpawnQuantity("100", "5"), 5);
+  assert.equal(calculateSpawnQuantity("100", ""), null);
+  assert.equal(calculateGrowingBagCount("60", "40", "10"), 10);
+  assert.equal(calculateGrowingBagCount("60", "", "10"), null);
+  assert.deepEqual(calculatePaddyStrawBalance("120", "50", true), { ownUsed: 50, purchased: 70 });
+  assert.deepEqual(calculatePaddyStrawBalance("120", "", false), { ownUsed: 0, purchased: 120 });
+  assert.equal(calculatePaddyStrawBalance("120", "", true), null);
+});
+
+test("editable room layout detects area and geometry changes against the plot", () => {
+  const dimensions = Object.fromEntries(layoutRooms.map((room) => [room.id, {
+    length: String(room.length),
+    width: String(room.width),
+  }]));
+  const layout = calculateRoomLayout(dimensions, "20", "40");
+  assert.equal(layout.totalArea, 800);
+  assert.equal(layout.passageArea, 120);
+  assert.equal(layout.areaMatches, true);
+  assert.equal(layout.geometryMatches, true);
+  dimensions["raw-straw"].width = "7";
+  const changedLayout = calculateRoomLayout(dimensions, "20", "40");
+  assert.equal(changedLayout.areaMatches, false);
+  assert.equal(changedLayout.geometryMatches, false);
+});
+
+test("planner catalog covers the requested options and keeps monthly costs outside initial investment", () => {
+  assert.equal(new Set(allPlannerItems.map((item) => item.id)).size, allPlannerItems.length);
+  assert.equal(plannerRoofOptions.length, 4);
+  assert.equal(plannerRoofOptions.some((option) => /asbestos-cement/i.test(option.label)), false);
+  assert.equal(plannerRoofOptions.some((option) => /asbestos-free/i.test(option.label)), true);
+  assert.ok(allPlannerItems.some((item) => item.id === "oyster-spawn" && item.quantitySource === "oysterSpawn"));
+  assert.ok(allPlannerItems.filter((item) => item.investmentType === "monthly").length > 0);
+  assert.ok(resourceRows.some((resource) => resource.id === "water" && resource.defaultAvailable === false));
+  assert.equal(planRows.flat().length, layoutRooms.length - 1);
+  const monthly = sumPlannerItems([{ estimate: calculatePlannerItem("10", "20", "5") }]);
+  assert.deepEqual(calculateCostPerKg(monthly, "10"), { minimum: 5, average: 7.5, maximum: 10 });
+  assert.equal(calculateCostPerKg(monthly, ""), null);
 });
