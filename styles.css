@@ -52,28 +52,14 @@ a:focus-visible, button:focus-visible {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
   flex: 0 0 auto;
   color: var(--green);
   line-height: 1;
 }
-.brand strong {
-  display: block;
-  font-family: "Playfair Display", serif;
-  font-size: 1.22rem;
-  letter-spacing: -.04em;
-}
-.brand small {
-  display: block;
-  margin-top: 4px;
-  font-size: .52rem;
-  font-weight: 700;
-  letter-spacing: .22em;
-}
 .brand-logo {
   display: block;
-  width: 62px;
-  height: 62px;
+  width: 72px;
+  height: 72px;
   object-fit: cover;
   border-radius: 50%;
 }
@@ -435,7 +421,7 @@ tbody td { color: #405345; }
 
 @media (max-width: 760px) {
   .site-header { padding: 12px 20px; flex-wrap: wrap; }
-  .brand-logo { width: 54px; height: 54px; }
+  .brand-logo { width: 60px; height: 60px; }
   .menu-toggle { display: block; margin-left: auto; }
   .site-nav { display: none; width: 100%; flex-direction: column; align-items: flex-start; padding: 10px 0; }
   .site-nav.open { display: flex; }

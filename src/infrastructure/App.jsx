@@ -88,8 +88,7 @@ function SiteHeader() {
   return (
     <header className="site-header infra-header">
       <a className="brand" href="index.html" aria-label="GreenSpore Farms home" onClick={closeMenu}>
-        <img className="brand-logo" src={logo} alt="" />
-        <span><strong>GreenSpore</strong><small>FARMS</small></span>
+        <img className="brand-logo" src={logo} alt="GreenSpore Farms emblem" />
       </a>
       <button
         className="menu-toggle"
@@ -597,8 +596,7 @@ function InfrastructurePage() {
 
       <footer className="infra-footer">
         <a className="brand" href="index.html" aria-label="GreenSpore Farms home">
-          <img className="brand-logo" src={logo} alt="" />
-          <span><strong>GreenSpore</strong><small>FARMS</small></span>
+          <img className="brand-logo" src={logo} alt="GreenSpore Farms emblem" />
         </a>
         <p>© <span>{new Date().getFullYear()}</span> GreenSpore Farms. Preliminary planning information only.</p>
       </footer>
