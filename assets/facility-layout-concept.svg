@@ -41,7 +41,7 @@
   <rect x="32" y="718" width="196" height="120" fill="#f8f3e8" stroke="#143d2b" stroke-width="2" />
   <text x="130" y="764" class="label"><tspan x="130">PACK / GRADE</tspan><tspan x="130" dy="20" class="size">10 ft × 5 ft · 50 sq ft</tspan><tspan x="130" dy="19" class="note">Clean post-harvest zone</tspan></text>
   <rect x="228" y="718" width="140" height="120" fill="#f8f3e8" stroke="#143d2b" stroke-width="2" />
-  <text x="298" y="758" class="label"><tspan x="298">FINISHED</tspan><tspan x="298" dy="19">TEMP STORE</tspan><tspan x="298" dy="19" class="size">7 ft × 5 ft</tspan><tspan x="298" dy="16" class="note">35 sq ft</tspan></text>
+  <text x="298" y="758" class="label"><tspan x="298">FINISHED PRODUCT</tspan><tspan x="298" dy="19">STORAGE</tspan><tspan x="298" dy="19" class="size">7 ft × 5 ft</tspan><tspan x="298" dy="16" class="note">35 sq ft</tspan></text>
 
   <rect x="368" y="42" width="60" height="796" fill="#e9eadb" stroke="#143d2b" stroke-width="2" />
   <text x="398" y="442" class="label" transform="rotate(-90 398 442)">SERVICE PASSAGE · 3 ft × 40 ft · 120 sq ft</text>

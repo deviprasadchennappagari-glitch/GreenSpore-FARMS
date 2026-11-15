@@ -24,7 +24,7 @@ The Vite build outputs the React infrastructure page and the existing static pag
 npm test
 ```
 
-The infrastructure plan includes an editable room layout, itemized construction and cultivation costs, roof comparisons, and separate initial and monthly estimates. Minimum and maximum unit prices are editable; averages and totals are calculated from entered prices and quantities. Unverified prices remain unfilled until checked locally. Planner values are saved in the current browser; GitHub Pages does not provide live shared storage.
+The infrastructure plan presents a prefilled, itemized budget for a proposed 20 × 40 ft mushroom farm. Construction and production setup are separated from crop-cycle expenses; all totals are calculated from the displayed quantities and average unit costs. Published AP schedule and ICAR-IIHR references are linked beside applicable items. Other rates are clearly marked as planning allowances to verify, not supplier quotations. Optional resource-reuse checkboxes start unconfirmed and reduce only their linked cost lines.
 
 ## Site pages and assets
 
@@ -33,7 +33,7 @@ The infrastructure plan includes an editable room layout, itemized construction 
 - `about.html` — project overview
 - `mushrooms.html` — Oyster and Milky crop profiles
 - `business-plan.html` — first-harvest and infrastructure estimates
-- `infrastructure.html` — React-powered, editable farm investment planner
+- `infrastructure.html` — React-powered, prefilled farm infrastructure budget
 - `assets/greenspore-logo.png` — supplied GreenSpore Farms badge
 - `assets/facility-layout-concept.svg` — preliminary 20 × 40 ft area schedule and concept layout
 
@@ -41,4 +41,4 @@ The infrastructure plan includes an editable room layout, itemized construction 
 
 The GitHub Actions workflow runs `npm ci`, `npm test` and `npm run build`, then deploys `dist/` to GitHub Pages when changes are pushed to `main`. Vite is configured for the repository Pages path.
 
-The site remains static after the Vite build; no application server or database is required. Infrastructure costs and technical details are planning assumptions, not supplier quotations or certified construction guidance. Validate the layout and requirements with local professionals before construction or procurement.
+The site remains static after the Vite build; no application server or database is required. Prices were reviewed on 15 November 2026; some cited schedule rates are not local delivered prices, and the published ICAR-IIHR spawn rate is dated 2023 and subject to revision. The Oyster yield, spawn-rate, bag-size and construction quantities are explicit planning assumptions, not certified design guidance. Confirm current local rates, crop protocol, resource availability and structural details before construction or purchase. Monthly operating costs are not estimated until cycle duration and measured utility use are known.
