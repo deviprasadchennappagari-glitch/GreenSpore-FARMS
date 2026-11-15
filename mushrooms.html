@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Explore the Oyster and Milky mushroom varieties planned for the GreenSpore Farms pilot." />
+    <title>Our Mushrooms | GreenSpore Farms</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="index.html" aria-label="GreenSpore Farms home"><img class="brand-logo" src="assets/greenspore-logo.png" alt="" /><span><strong>GreenSpore</strong><small>FARMS</small></span></a>
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <nav id="site-nav" class="site-nav" aria-label="Primary navigation">
+        <a href="about.html">About</a>
+        <a href="mushrooms.html" aria-current="page">Our Mushrooms</a>
+        <a href="index.html#infrastructure">Infrastructure</a>
+        <a href="business-plan.html">Business Plan</a>
+        <a href="index.html#roadmap">Roadmap</a>
+      </nav>
+    </header>
+    <main>
+      <section class="page-hero">
+        <p class="eyebrow">Our mushrooms</p>
+        <h1>Two varieties. One careful growing standard.</h1>
+        <p class="intro">The first proposed crop mix pairs Oyster and Milky mushrooms—two varieties suited to a warm-climate pilot, each with its own growing needs.</p>
+      </section>
+      <section class="section variety-section">
+        <div class="variety-grid">
+          <article class="variety-card oyster">
+            <p class="eyebrow">01 · Pleurotus</p>
+            <h2>Oyster Mushroom</h2>
+            <p>Versatile and well suited to a straw-based growing cycle, Oyster mushrooms are planned as the larger share of the first crop. The project will select a warm-climate-tolerant strain with guidance from the spawn supplier or local experts.</p>
+            <dl class="variety-facts">
+              <div><dt>First-cycle planning target</dt><dd>60 kg across all flushes</dd></div>
+              <div><dt>Planning yield</dt><dd>500 g per kg dry straw</dd></div>
+              <div><dt>Indicative bag count</dt><dd>120 bags at about 1 kg dry straw per bag</dd></div>
+              <div><dt>Growing focus</dt><dd>Fresh-air exchange, humidity, diffused light, and no direct sunlight</dd></div>
+            </dl>
+          </article>
+          <article class="variety-card milky">
+            <p class="eyebrow">02 · Calocybe indica</p>
+            <h2>Milky Mushroom</h2>
+            <p>Milky mushrooms suit warm conditions and add a second crop to the planned mix. They require a casing stage after the substrate is fully colonised, using a clean and validated casing method.</p>
+            <dl class="variety-facts">
+              <div><dt>First-cycle planning target</dt><dd>40 kg across all flushes</dd></div>
+              <div><dt>Planning yield</dt><dd>600 g per kg dry straw</dd></div>
+              <div><dt>Indicative bag count</dt><dd>67 bags at about 1 kg dry straw per bag</dd></div>
+              <div><dt>Growing focus</dt><dd>Warm fruiting conditions, humidity, ventilation, and hygienic casing</dd></div>
+            </dl>
+          </article>
+        </div>
+        <p class="note">Yields, bag counts, and environmental conditions are planning assumptions, not guaranteed results or universal cultivation instructions. Actual performance depends on strain, substrate preparation, hygiene, room conditions, and cultivation protocol. Confirm strain-specific guidance with the spawn supplier or a local KVK before production.</p>
+      </section>
+      <section class="section cultivation-section">
+        <div class="section-heading"><p class="eyebrow">From straw to harvest</p><h2>A process designed around care.</h2></div>
+        <ol class="process-list">
+          <li><span>01</span><div><h3>Prepare the substrate</h3><p>Use clean, dry, mature paddy straw and follow a validated preparation and pasteurisation protocol.</p></div></li>
+          <li><span>02</span><div><h3>Inoculate and incubate</h3><p>Use clean handling practices and keep incubation separate from fruiting environments.</p></div></li>
+          <li><span>03</span><div><h3>Manage crop-specific needs</h3><p>Monitor temperature, humidity, and fresh air at crop height. Apply casing to Milky bags after full spawn run.</p></div></li>
+          <li><span>04</span><div><h3>Harvest and record</h3><p>Weigh, grade, pack, and dispatch promptly. Track every batch and flush to compare actual results with the plan.</p></div></li>
+        </ol>
+        <a class="text-link" href="business-plan.html#first-harvest">View first-harvest assumptions <span aria-hidden="true">→</span></a>
+      </section>
+    </main>
+    <footer><a class="brand" href="index.html" aria-label="GreenSpore Farms home"><img class="brand-logo" src="assets/greenspore-logo.png" alt="" /><span><strong>GreenSpore</strong><small>FARMS</small></span></a><p>© <span id="year"></span> GreenSpore Farms. Project figures and plans are indicative.</p></footer>
+    <script src="script.js"></script>
+  </body>
+</html>

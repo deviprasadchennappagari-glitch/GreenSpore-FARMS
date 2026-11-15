@@ -1,6 +1,6 @@
-# GreenSpore Farms — Version 1
+# GreenSpore Farms
 
-A responsive partner-facing landing site for GreenSpore Farms. It is intentionally a lightweight static site with no build dependency.
+A responsive static website for the proposed GreenSpore Farms mushroom-cultivation pilot near Kanipakam, Andhra Pradesh. The site has separate About, Our Mushrooms, and Business Plan pages, plus the facility plan and project roadmap on the home page.
 
 ## Run locally
 
@@ -16,10 +16,17 @@ This runs `serve` through `npx`; if prompted, allow the one-time temporary downl
 npm test
 ```
 
-## Brand asset
+## Site pages and assets
 
-The approved GreenSpore circular badge has not yet been provided in this environment. The current `GS` circle is a temporary placeholder. When available, save it as `assets/greenspore-logo.png` and update the two `.brand-mark` spans in `index.html` to image elements.
+- `index.html` — home, facility concept, and roadmap
+- `about.html` — project overview
+- `mushrooms.html` — Oyster and Milky crop profiles
+- `business-plan.html` — first-harvest and infrastructure estimates
+- `assets/greenspore-logo.png` — supplied GreenSpore Farms badge
+- `assets/facility-floor-plan.png` — supplied conceptual 20 × 40 ft floor plan
 
 ## Deployment
+
+The documents provide planning estimates, not supplier quotations or guaranteed outcomes. The floor plan is conceptual and must not be used as a certified construction drawing. Validate crop assumptions, costs, buyers, local rules, and professional design requirements before investment.
 
 Because this is static HTML/CSS/JS, it can be deployed directly to GitHub Pages, Netlify, or Vercel without a build command. For GitHub Pages, publish from the repository root on the desired branch.
