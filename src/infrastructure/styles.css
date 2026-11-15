@@ -241,6 +241,44 @@
 .quote-slot > label { margin-bottom: 12px; }
 .quote-slot textarea { resize: vertical; }
 .quote-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
+.assumptions-panel, .labor-estimator { margin: 20px; padding: 20px; border: 1px solid var(--line); background: #fbfaf6; }
+.assumptions-panel h4 { margin: 24px 0 12px; color: var(--green); }
+.assumption-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 14px 0; }
+.assumption-grid label { display: grid; gap: 5px; color: var(--green); font-size: .78rem; font-weight: 700; }
+.assumption-grid input, .assumption-grid select, .compact-input input, .compact-input select {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 8px;
+  color: var(--ink);
+  background: #fff;
+  font: inherit;
+  font-size: .82rem;
+}
+.brick-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 20px; }
+.brick-option-card { min-width: 0; padding: 16px; border: 1px solid var(--line); background: var(--white); }
+.brick-option-card h4 { margin: 0 0 10px; }
+.brick-option-card p { margin: 8px 0; color: var(--muted); font-size: .84rem; }
+.brick-option-card p strong { color: var(--green); }
+.brick-option-select { display: flex; align-items: center; gap: 8px; color: var(--green); font-size: .82rem; }
+.brick-option-select input { accent-color: var(--green); }
+.range-inputs { display: grid; grid-template-columns: repeat(2, minmax(115px, 1fr)); gap: 7px; min-width: 230px; }
+.range-inputs .compact-input { min-width: 0; }
+.compact-input { min-width: 130px; }
+.compact-input input, .compact-input select { padding: 7px; }
+.cost-explorer-table table { min-width: 2300px; }
+.cost-explorer-table td { min-width: 145px; vertical-align: top; }
+.cost-explorer-table td:first-child { min-width: 210px; font-weight: 700; }
+.cost-explorer-table td:nth-child(2) { min-width: 280px; }
+.cost-explorer-table .compact-input { min-width: 145px; }
+.cost-explorer-table .range-inputs { min-width: 260px; }
+.cost-explorer-table small { display: block; max-width: 240px; margin-top: 7px; color: var(--muted); font-size: .74rem; }
+.labor-estimator { margin-top: 34px; }
+.labor-estimator .infra-table-wrap table { min-width: 1200px; }
+.labor-estimator .infra-subheading:first-child { margin-top: 0; }
+.labor-total { padding: 14px 16px; border-left: 4px solid var(--gold); background: var(--white); color: var(--green); }
+.labor-total span { color: var(--muted); font-size: .82rem; }
 
 @media (max-width: 980px) {
   .infra-header .site-nav { gap: 12px; font-size: .8rem; }
@@ -260,7 +298,8 @@
   .infra-section { padding: 62px 20px; }
   .infra-section-title { margin-bottom: 26px; }
   .infra-fact-grid, .budget-cards, .status-legend, .biosecurity-grid { grid-template-columns: 1fr; }
-  .roof-option-grid, .room-volume-grid, .quote-slots, .roof-dimensions { grid-template-columns: 1fr; }
+  .roof-option-grid, .room-volume-grid, .quote-slots, .roof-dimensions,
+  .assumption-grid, .brick-options { grid-template-columns: 1fr; }
   .roof-calculator, .roof-option-card, .room-volume-card, .quote-slot { padding: 15px; }
   .roof-cost-inputs, .quote-fields { grid-template-columns: 1fr; }
   .infra-fact-card { min-height: 0; }

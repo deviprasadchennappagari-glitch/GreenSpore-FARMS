@@ -4,10 +4,14 @@ import { getBudgetSummary, layoutRooms, projectDetails } from "./data.js";
 import {
   calculateRoofArea,
   calculateRoofOptionCost,
+  calculateBoqItem,
+  calculateDailyLabour,
+  calculateWallQuantities,
   getItemCostSummary,
   isReliableQuote,
 } from "./calculations.js";
-import { allProcurementItems, roomEquipmentSchedule } from "./detail-data.js";
+import { roomEquipmentSchedule, roofingOptions } from "./detail-data.js";
+import { allCostItems, constructionAssumptionsDefaults, constructionGroups } from "./construction-data.js";
 
 test("the conceptual room schedule fits the stated 800 sq ft plot exactly", () => {
   const scheduledArea = layoutRooms.reduce((total, room) => total + room.area, 0);
@@ -77,6 +81,12 @@ test("average unit and total cost use the reliable low/high quotes and measured 
   assert.equal(summary.maximum, 190);
   assert.equal(summary.averageUnitCost, 165);
   assert.equal(summary.averageTotalCost, 82500);
+  const mismatched = getItemCostSummary({
+    first: { ...baseQuote, quotedUnitPrice: "140" },
+    second: { ...baseQuote, quotedUnitPrice: "190", specification: "40 mm roof panel" },
+  }, "500", new Date("2026-06-01T00:00:00"));
+  assert.equal(mismatched.status, "Specifications differ; compare separately");
+  assert.equal(mismatched.averageUnitCost, null);
 });
 
 test("roof area uses measured slope and overhang rather than assuming plot area", () => {
@@ -87,22 +97,128 @@ test("roof area uses measured slope and overhang rather than assuming plot area"
     materialMinRate: "140",
     materialMaxRate: "190",
     structuralSupport: "10000",
-    installation: "5000",
+    fabricationLabour: "2500",
+    installationLabour: "5000",
     insulation: "0",
+    ceiling: "0",
+    fasteners: "2000",
     flashingGutters: "2000",
+    transport: "1000",
   });
   assert.equal(estimate.averageMaterialCost, 152460);
-  assert.equal(estimate.totalAverage, 169460);
+  assert.equal(estimate.totalAverage, 174960);
   assert.equal(calculateRoofOptionCost(924, {}), null);
 });
 
 test("the procurement catalog has unique cost records for every room placement", () => {
-  const ids = allProcurementItems.map((item) => item.id);
+  const ids = allCostItems.map((item) => item.id);
   assert.equal(new Set(ids).size, ids.length);
   assert.equal(roomEquipmentSchedule.length, 10);
+  assert.equal(constructionGroups.length, 12);
+  assert.deepEqual(constructionGroups.map((group) => group.title), [
+    "1. Site Preparation and Foundation",
+    "2. Cement Brick / Concrete Block Construction",
+    "3. Shed Roof and Roofing Materials",
+    "4. Roof Insulation and Ceiling",
+    "5. Flooring and Drainage",
+    "6. Internal Partitions and Doors",
+    "7. Waterproofing and Painting",
+    "8. Electrical Infrastructure",
+    "9. Plumbing and Water Supply",
+    "10. Temperature and Humidity Equipment",
+    "11. Ventilation and Air Management",
+    "12. Mushroom Racks and Interior Equipment",
+  ]);
+  assert.equal(roofingOptions.length, 4);
+  assert.equal(roofingOptions.some((option) => /asbestos-cement/i.test(option.option)), false);
+  assert.equal(roofingOptions.some((option) => option.id === "fibre-cement" && option.option.includes("Asbestos-free")), true);
+  assert.equal(constructionAssumptionsDefaults.buildingLength, "");
+  assert.equal(constructionAssumptionsDefaults.buildingWidth, "");
+  assert.equal(constructionAssumptionsDefaults.partitionThickness, "");
   for (const room of roomEquipmentSchedule) {
     for (const equipmentId of room.equipmentIds) {
       assert.equal(ids.includes(equipmentId), true, `${equipmentId} must have one procurement record`);
     }
   }
+});
+
+test("wall quantities use entered footprint, openings, brick size and wastage", () => {
+  const result = calculateWallQuantities({
+    buildingLength: "40",
+    buildingWidth: "20",
+    wallHeight: "10",
+    openingsArea: "100",
+    partitionLength: "40",
+    partitionHeight: "10",
+    partitionOpeningsArea: "0",
+    wallThickness: "0.667",
+    partitionThickness: "0.5",
+    brickLength: "8",
+    brickWidth: "4",
+    brickHeight: "2.5",
+    jointThickness: "0.375",
+    wastagePercent: "5",
+    cementParts: "1",
+    sandParts: "6",
+    dryFactor: "1.33",
+    cementBagVolume: "1.25",
+  });
+  assert.equal(result.externalGrossArea, 1200);
+  assert.equal(result.externalNetArea, 1100);
+  assert.equal(result.partitionNetArea, 400);
+  assert.equal(result.totalBricks, result.externalBricks + result.partitionBricks);
+  assert.equal(result.mortarVolume, result.externalMortarVolume + result.partitionMortarVolume);
+  assert.ok(result.cementBags > 0);
+  assert.ok(result.sandVolume > 0);
+  assert.ok(result.externalCementBags > 0);
+  assert.ok(result.partitionCementBags > 0);
+  assert.equal(calculateWallQuantities({ buildingLength: "", buildingWidth: "20" }), null);
+  const externalOnly = calculateWallQuantities({
+    buildingLength: "40", buildingWidth: "20", wallHeight: "10", openingsArea: "100",
+    wallThickness: "0.667", brickLength: "8", brickWidth: "4", brickHeight: "2.5",
+    jointThickness: "0.375", wastagePercent: "5", cementParts: "1", sandParts: "6",
+    dryFactor: "1.33", cementBagVolume: "1.25",
+  });
+  assert.ok(externalOnly.externalCementBags > 0);
+  assert.equal(externalOnly.partitionCementBags, null);
+  assert.equal(externalOnly.cementBags, null);
+  assert.equal(calculateWallQuantities({
+    buildingLength: "40", buildingWidth: "20", wallHeight: "10", openingsArea: "0",
+    wallThickness: "0.5", partitionThickness: "-1",
+    brickLength: "8", brickWidth: "4", brickHeight: "2.5", jointThickness: "0.375",
+    wastagePercent: "5",
+  }), null);
+});
+
+test("BOQ totals keep material, local labour, transport and installation separate", () => {
+  const result = calculateBoqItem({
+    quantity: "10",
+    minimumRate: "100",
+    maximumRate: "200",
+    minimumLaborRate: "20",
+    maximumLaborRate: "40",
+    tax: "0",
+    transport: "50",
+    installation: "100",
+  });
+  assert.equal(result.unitCost, 150);
+  assert.equal(result.materialTotal, 1500);
+  assert.equal(result.laborTotal, 300);
+  assert.equal(result.finalAverageTotal, 1950);
+  assert.equal(calculateBoqItem({
+    quantity: "10", minimumRate: "100", maximumRate: "200",
+    minimumLaborRate: "20", maximumLaborRate: "40",
+    tax: "150", transport: "50", installation: "100",
+  }).finalAverageTotal, 2100);
+  assert.equal(calculateBoqItem({ quantity: "10" }).finalAverageTotal, null);
+});
+
+test("labour estimation supports daily wages or an exclusive activity contract", () => {
+  assert.equal(calculateDailyLabour({
+    minimumRate: "600", maximumRate: "900", workers: "2", days: "3", method: "daily",
+  }), 4500);
+  assert.equal(calculateDailyLabour({
+    minimumRate: "600", maximumRate: "900", workers: "2", days: "3",
+    method: "contract", contractRate: "50", contractQuantity: "10",
+  }), 500);
 });

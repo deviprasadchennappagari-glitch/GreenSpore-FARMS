@@ -12,25 +12,29 @@ import {
   roadmap,
 } from "./data.js";
 import {
-  allProcurementItems,
   ceilingInsulationNotes,
-  constructionGroups,
-  connectedLoadSchedule,
   environmentalSensors,
   fogWaterEquipment,
-  flooringRoomSpecs,
   humidificationOptions,
   pufThicknesses,
   roomEquipmentSchedule,
   roofingOptions,
-  structuralOptions,
   temperatureEquipment,
   ventilationEquipment,
-  wallOptions,
 } from "./detail-data.js";
 import {
+  allCostItems as allProcurementItems,
+  constructionAssumptionsDefaults,
+  constructionGroups,
+  labourTasks,
+  labourTrades,
+} from "./construction-data.js";
+import {
+  calculateBoqItem,
+  calculateDailyLabour,
   calculateRoofArea,
   calculateRoofOptionCost,
+  calculateWallQuantities,
   getItemCostSummary,
   isReliableQuote,
   isProcurementState,
@@ -56,6 +60,7 @@ const quoteSlots = ["supplier-1", "supplier-2", "supplier-3"];
 const quoteStatuses = ["Not requested", "Quote requested", "Quoted", "Selected", "Purchased", "Declined"];
 const quoteFields = [
   "supplier",
+  "contact",
   "model",
   "specification",
   "quotedUnitPrice",
@@ -63,6 +68,7 @@ const quoteFields = [
   "transport",
   "installation",
   "warranty",
+  "deliveryTerms",
   "quoteDate",
   "validUntil",
   "selectedPrice",
@@ -74,28 +80,58 @@ const roofCostFields = [
   "materialMinRate",
   "materialMaxRate",
   "structuralSupport",
-  "installation",
+  "fabricationLabour",
+  "installationLabour",
   "insulation",
+  "ceiling",
+  "fasteners",
   "flashingGutters",
+  "transport",
 ];
 
 function createEmptyProcurementState() {
   const options = Object.fromEntries(roofingOptions.map((option) => [
     option.id,
     {
-      materialMinRate: "",
-      materialMaxRate: "",
-      structuralSupport: "",
-      installation: "",
-      insulation: "",
-      flashingGutters: "",
-      thickness: "50",
+      ...Object.fromEntries(roofCostFields.map((field) => [field, ""])),
+      thickness: "",
     },
+  ]));
+  const costInputs = Object.fromEntries(allProcurementItems.map((item) => [
+    item.id,
+    {
+      materialSource: "not-set",
+      marketMinimum: "",
+      marketMaximum: "",
+      laborMinimumRate: "",
+      laborMaximumRate: "",
+      tax: "",
+      transport: "",
+      installation: "",
+      sourceNote: "",
+    },
+  ]));
+  const laborRates = Object.fromEntries(labourTrades.map((trade) => [
+    trade.id,
+    { minimumRate: trade.minimumRate, maximumRate: trade.maximumRate },
+  ]));
+  const laborEntries = Object.fromEntries(labourTasks.map((task) => [
+    task.id,
+    { method: "daily", workers: "", days: "", contractAmount: "", contractRate: "", contractQuantity: "" },
+  ]));
+  const brickOptions = Object.fromEntries(["A", "B", "C"].map((option) => [
+    option,
+    { length: "", width: "", height: "", weight: "", strength: "" },
   ]));
   return {
     version: PROCUREMENT_STORAGE_VERSION,
     quotes: {},
     quantities: {},
+    costInputs,
+    constructionAssumptions: { ...constructionAssumptionsDefaults, brickOption: "A" },
+    brickOptions,
+    laborRates,
+    laborEntries,
     roomDimensions: {
       oyster: { length: "", width: "", height: "" },
       milky: { length: "", width: "", height: "" },
@@ -135,6 +171,58 @@ function normalizeProcurementState(value) {
     if (typeof quantity === "string" || typeof quantity === "number") {
       normalized.quantities[item.id] = String(quantity);
     }
+
+    const costInput = value.costInputs?.[item.id];
+    if (costInput && typeof costInput === "object") {
+      const current = normalized.costInputs[item.id];
+      for (const field of Object.keys(current)) {
+        const fieldValue = costInput[field];
+        if (typeof fieldValue === "string" || typeof fieldValue === "number") current[field] = String(fieldValue);
+      }
+      if (!["not-set", "market", "supplier"].includes(current.materialSource)) current.materialSource = "not-set";
+    }
+  }
+
+  for (const [field, defaultValue] of Object.entries(constructionAssumptionsDefaults)) {
+    const fieldValue = value.constructionAssumptions?.[field];
+    if (typeof fieldValue === "string" || typeof fieldValue === "number") {
+      normalized.constructionAssumptions[field] = String(fieldValue);
+    } else {
+      normalized.constructionAssumptions[field] = defaultValue;
+    }
+  }
+  const selectedBrickOption = value.constructionAssumptions?.brickOption;
+  if (["A", "B", "C"].includes(selectedBrickOption)) normalized.constructionAssumptions.brickOption = selectedBrickOption;
+  for (const option of ["A", "B", "C"]) {
+    const input = value.brickOptions?.[option];
+    if (!input || typeof input !== "object") continue;
+    for (const field of Object.keys(normalized.brickOptions[option])) {
+      const fieldValue = input[field];
+      if (typeof fieldValue === "string" || typeof fieldValue === "number") {
+        normalized.brickOptions[option][field] = String(fieldValue);
+      }
+    }
+  }
+  for (const trade of labourTrades) {
+    const rates = value.laborRates?.[trade.id];
+    if (!rates || typeof rates !== "object") continue;
+    for (const field of ["minimumRate", "maximumRate"]) {
+      const fieldValue = rates[field];
+      if (typeof fieldValue === "string" || typeof fieldValue === "number") {
+        normalized.laborRates[trade.id][field] = String(fieldValue);
+      }
+    }
+  }
+  for (const task of labourTasks) {
+    const entry = value.laborEntries?.[task.id];
+    if (!entry || typeof entry !== "object") continue;
+    for (const field of ["workers", "days", "contractAmount", "contractRate", "contractQuantity"]) {
+      const fieldValue = entry[field];
+      if (typeof fieldValue === "string" || typeof fieldValue === "number") {
+        normalized.laborEntries[task.id][field] = String(fieldValue);
+      }
+    }
+    if (entry.method === "contract" || entry.method === "daily") normalized.laborEntries[task.id].method = entry.method;
   }
 
   for (const crop of ["oyster", "milky"]) {
@@ -164,13 +252,53 @@ function normalizeProcurementState(value) {
       const inputs = roofOptions[option.id];
       if (!inputs || typeof inputs !== "object") continue;
       for (const field of roofCostFields) {
-        const fieldValue = inputs[field];
+        const fieldValue = field === "installationLabour" ? inputs.installationLabour ?? inputs.installation : inputs[field];
         if (typeof fieldValue === "string" || typeof fieldValue === "number") {
           normalized.roofCalculator.options[option.id][field] = String(fieldValue);
         }
       }
       if (pufThicknesses.includes(Number(inputs.thickness))) {
         normalized.roofCalculator.options[option.id].thickness = String(inputs.thickness);
+      }
+    }
+  }
+  const aliases = [
+    ["lighting", "electrical-led-lighting"],
+    ["protected-panel", "electrical-main-distribution-board"],
+    ["roof-puf-roof-panel-30-mm", "roof-puf-panels"],
+    ["roof-puf-roof-panel-40-mm", "roof-puf-panels"],
+    ["roof-puf-roof-panel-50-mm", "roof-puf-panels"],
+    ["roof-puf-roof-panel-60-mm", "roof-puf-panels"],
+    ["roof-puf-roof-panel-80-mm", "roof-puf-panels"],
+  ];
+  for (const [sourceId, targetId] of aliases) {
+    if (!allProcurementItems.some((item) => item.id === targetId)) continue;
+    const legacyPufThickness = sourceId.match(/^roof-puf-roof-panel-(\d+)-mm$/)?.[1];
+    normalized.quotes[targetId] ||= {};
+    for (const slot of quoteSlots) {
+      if (!normalized.quotes[targetId][slot] && value.quotes?.[sourceId]?.[slot]) {
+        const migratedQuote = {
+          ...getBlankQuote(),
+          ...value.quotes[sourceId][slot],
+        };
+        if (legacyPufThickness) {
+          migratedQuote.specification = `${migratedQuote.specification}${migratedQuote.specification ? " · " : ""}legacy ${legacyPufThickness} mm PUF panel`;
+        }
+        normalized.quotes[targetId][slot] = migratedQuote;
+      }
+    }
+    if (!legacyPufThickness && normalized.quantities[targetId] === undefined && value.quantities?.[sourceId] !== undefined) {
+      const quantity = value.quantities[sourceId];
+      if (typeof quantity === "string" || typeof quantity === "number") normalized.quantities[targetId] = String(quantity);
+    }
+    const sourceInput = value.costInputs?.[sourceId];
+    if (!legacyPufThickness && sourceInput && typeof sourceInput === "object") {
+      const targetInput = normalized.costInputs[targetId];
+      for (const [field, fieldValue] of Object.entries(sourceInput)) {
+        if ((targetInput[field] === "" || targetInput[field] === "not-set") &&
+            (typeof fieldValue === "string" || typeof fieldValue === "number")) {
+          targetInput[field] = String(fieldValue);
+        }
       }
     }
   }
@@ -186,7 +314,7 @@ function formatCost(value) {
 }
 
 function formatTotalCost(summary) {
-  if (!summary?.reliableQuoteCount) return "Quotation Required";
+  if (summary?.averageUnitCost === null || summary?.averageUnitCost === undefined) return "Quotation Required";
   return summary.averageTotalCost === null ? "Quantity Required" : formatCurrency(summary.averageTotalCost);
 }
 
@@ -198,25 +326,144 @@ function getRoomVolume(dimensions) {
   return values.reduce((total, value) => total * value, 1);
 }
 
+function getWallEstimates(assumptions, brickOptions) {
+  return Object.fromEntries(["A", "B", "C"].map((option) => {
+    const brick = brickOptions[option];
+    return [option, calculateWallQuantities({
+      buildingLength: assumptions.buildingLength,
+      buildingWidth: assumptions.buildingWidth,
+      wallHeight: assumptions.wallHeight,
+      openingsArea: assumptions.externalOpeningsArea,
+      partitionLength: assumptions.partitionLength,
+      partitionHeight: assumptions.partitionHeight,
+      partitionOpeningsArea: assumptions.partitionOpeningsArea,
+      wallThickness: assumptions.wallThickness,
+      partitionThickness: assumptions.partitionThickness,
+      brickLength: brick.length,
+      brickWidth: brick.width,
+      brickHeight: brick.height,
+      jointThickness: assumptions.mortarJoint,
+      wastagePercent: assumptions.brickWastagePercent,
+      cementParts: assumptions.cementParts,
+      sandParts: assumptions.sandParts,
+      dryFactor: assumptions.mortarDryFactor,
+      cementBagVolume: assumptions.cementBagVolume,
+    })];
+  }));
+}
+
+function getCalculatedQuantity(item, state, wallEstimates) {
+  const manualValue = getInputNumber(state.quantities[item.id]);
+  if (manualValue !== null) return manualValue;
+  const optionMatch = item.id.match(/^brick-solid-option-([abc])$/);
+  if (optionMatch) return wallEstimates[optionMatch[1].toUpperCase()]?.totalBricks ?? null;
+  const selectedWall = wallEstimates[state.constructionAssumptions.brickOption];
+  if (!selectedWall) return null;
+  if (item.id === "masonry-cement") return selectedWall.externalCementBags;
+  if (item.id === "masonry-sand") return selectedWall.externalSandVolume;
+  if (item.id === "partition-masonry-cement") return selectedWall.partitionCementBags;
+  if (item.id === "partition-masonry-sand") return selectedWall.partitionSandVolume;
+  if (item.id === "masonry-mason-labour" || item.id === "masonry-helper-labour" || item.id === "masonry-wall-contract") {
+    return selectedWall.partitionNetArea === null ? null : selectedWall.externalNetArea + selectedWall.partitionNetArea;
+  }
+  if (item.id === "partition-cement-block" || item.id === "partition-installation-labour") {
+    return selectedWall.partitionNetArea;
+  }
+  return null;
+}
+
 function getReliableQuoteFieldAverage(quotes, field) {
-  const values = Object.values(quotes || {})
-    .filter((quote) => isReliableQuote(quote))
-    .map((quote) => quote[field] === "" ? null : Number(quote[field]))
-    .filter((value) => Number.isFinite(value) && value >= 0);
-  if (!values.length) return null;
+  const reliableQuotes = Object.values(quotes || {}).filter((quote) => isReliableQuote(quote));
+  if (!reliableQuotes.length) return null;
+  const specifications = new Set(reliableQuotes.map((quote) => quote.specification.trim().toLocaleLowerCase()));
+  if (specifications.size > 1) return null;
+  const values = reliableQuotes.map((quote) => quote[field] === "" ? null : Number(quote[field]));
+  if (values.some((value) => !Number.isFinite(value) || value < 0)) return null;
   return (Math.min(...values) + Math.max(...values)) / 2;
+}
+
+function getActualPurchaseTotal(quotes) {
+  const values = Object.values(quotes || {})
+    .filter((quote) => quote?.status === "Purchased")
+    .map((quote) => quote.purchasedAmount === "" ? null : Number(quote.purchasedAmount))
+    .filter((value) => Number.isFinite(value) && value >= 0);
+  return values.length ? values.reduce((total, value) => total + value, 0) : null;
+}
+
+function getInputNumber(value) {
+  if (value === "" || value === null || value === undefined) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getCostRow(item, state, quantityOverride) {
+  const input = state.costInputs[item.id];
+  const quotes = state.quotes[item.id] || {};
+  const quantity = quantityOverride ?? getInputNumber(state.quantities[item.id]);
+  const supplierSummary = getItemCostSummary(quotes, quantity);
+  const hasMarketReference = Boolean(input.sourceNote?.trim());
+  const minimumRate = input.materialSource === "supplier"
+    ? supplierSummary.minimum
+    : input.materialSource === "market" && hasMarketReference ? getInputNumber(input.marketMinimum) : null;
+  const maximumRate = input.materialSource === "supplier"
+    ? supplierSummary.maximum
+    : input.materialSource === "market" && hasMarketReference ? getInputNumber(input.marketMaximum) : null;
+  const transport = input.materialSource === "supplier"
+    ? getReliableQuoteFieldAverage(quotes, "transport")
+    : getInputNumber(input.transport);
+  const tax = input.materialSource === "supplier"
+    ? getReliableQuoteFieldAverage(quotes, "gst")
+    : getInputNumber(input.tax);
+  const installation = input.materialSource === "supplier"
+    ? getReliableQuoteFieldAverage(quotes, "installation")
+    : getInputNumber(input.installation);
+  const calculation = calculateBoqItem({
+    quantity,
+    minimumRate,
+    maximumRate,
+    minimumLaborRate: input.laborMinimumRate,
+    maximumLaborRate: input.laborMaximumRate,
+    tax,
+    transport,
+    installation,
+  });
+  return {
+    ...calculation,
+    quantity,
+    supplierSummary,
+    actualPurchaseTotal: getActualPurchaseTotal(quotes),
+    materialSource: input.materialSource,
+    sourceNote: input.sourceNote,
+    minimum: minimumRate,
+    maximum: maximumRate,
+    averageUnitCost: calculation.unitCost,
+    averageTotalCost: calculation.materialTotal,
+    reliableQuoteCount: input.materialSource === "supplier" ? supplierSummary.reliableQuoteCount : Number(calculation.unitCost !== null),
+    status: input.materialSource === "market" ? "Estimated market price"
+      : input.materialSource === "supplier" ? supplierSummary.status : "Quotation Required",
+  };
+}
+
+function getQuoteLandedCost(quote, quantity) {
+  if (!isReliableQuote(quote)) return null;
+  const values = [quote.quotedUnitPrice, quote.gst, quote.transport, quote.installation]
+    .map((value) => value === "" ? null : Number(value));
+  const amount = getInputNumber(quantity);
+  if (amount === null || amount <= 0 || values.some((value) => value === null || !Number.isFinite(value) || value < 0)) return null;
+  return values[0] * amount + values[1] + values[2] + values[3];
 }
 
 function getBudgetParent(item) {
   const category = item.category.toLowerCase();
   const name = item.item.toLowerCase();
-  if (category.startsWith("environmental control")) return existingBudget[1].category;
+  if (category.includes("temperature and humidity") || category.includes("ventilation and air")) return existingBudget[1].category;
   if (name.includes("rack") || name.includes("bag support") || item.id === "raised-pallets") return existingBudget[2].category;
   if (name.includes("casing")) return existingBudget[4].category;
   if (name.includes("packing") || name.includes("harvest crate") || name.includes("refrigerator") || name.includes("cooling")) {
     return existingBudget[5].category;
   }
-  if (category.includes("substrate preparation") || category.includes("storage and handling") || category.includes("inoculation")) {
+  if (category.includes("mushroom racks and interior") &&
+      (name.includes("straw") || name.includes("pasteur") || name.includes("substrate") || name.includes("incubation"))) {
     return existingBudget[3].category;
   }
   return existingBudget[0].category;
@@ -239,6 +486,7 @@ function getBudgetNote(item) {
   if (priority.includes("alternative")) return "Mutually exclusive option; price for comparison, then include only the selected system.";
   if (name.includes("insulation") || name.includes("ceiling")) return "Potential overlap with roof/wall assembly; reconcile and count the chosen insulation layer once.";
   if (name.includes("pipe") || name.includes("drain")) return "Coordinate civil/plumbing scope to avoid duplicate route, drain or installation charges.";
+  if (name.includes("labour") || name.includes("labor") || name.includes("contract")) return "Choose one scoped labour allowance or activity contract; do not add overlapping rates.";
   if (isPotentiallyOutsideBaseline(item)) return "Potentially outside baseline; approve separately before including.";
   return "Mapped to existing baseline; reconcile once and do not add twice.";
 }
@@ -250,9 +498,9 @@ function getRowKey(row, index) {
   return row.id || (parts.length ? parts.join("::") : index);
 }
 
-function DataTable({ columns, rows, caption }) {
+function DataTable({ columns, rows, caption, className = "" }) {
   return (
-    <div className="table-wrap infra-table-wrap">
+    <div className={`table-wrap infra-table-wrap ${className}`.trim()}>
       <table>
         {caption && <caption>{caption}</caption>}
         <thead>
@@ -352,7 +600,7 @@ function QuantityField({ item, value, onChange }) {
   );
 }
 
-function RoofCalculator({ calculator, onDimensionChange, onOptionChange }) {
+function RoofCalculator({ calculator, roofShape, onDimensionChange, onOptionChange }) {
   const area = calculateRoofArea(calculator.dimensions);
   const dimensionFields = [
     ["length", "Roof length (ft)"],
@@ -363,18 +611,23 @@ function RoofCalculator({ calculator, onDimensionChange, onOptionChange }) {
 
   const comparisonRows = roofingOptions.map((option) => {
     const optionInputs = calculator.options[option.id];
-    const estimate = calculateRoofOptionCost(area, optionInputs);
+    const estimate = option.id === "puf" && !optionInputs.thickness
+      ? null
+      : calculateRoofOptionCost(area, optionInputs);
     return {
       option: option.option,
-      thickness: option.id === "puf" ? `${optionInputs.thickness} mm` : option.thickness,
+      thickness: option.id === "puf" ? (optionInputs.thickness ? `${optionInputs.thickness} mm` : "Select thickness") : option.thickness,
       roofArea: area === null ? "Enter measured dimensions" : `${area.toFixed(1)} sq ft`,
       materialRange: estimate
         ? `${formatCurrency(estimate.materialMinimum)}–${formatCurrency(estimate.materialMaximum)}`
         : "Quotation Required",
-      structuralSupport: estimate ? formatCurrency(estimate.structuralSupport) : "Quotation Required",
-      installation: estimate ? formatCurrency(estimate.installation) : "Quotation Required",
+      rate: estimate ? `${formatCurrency(estimate.averageMaterialRate)} / sq ft` : "Quotation Required",
+      materialAverage: estimate ? formatCurrency(estimate.averageMaterialCost) : "Quotation Required",
+      labour: estimate ? formatCurrency(estimate.fabricationLabour + estimate.installationLabour) : "Quotation Required",
+      transport: estimate ? formatCurrency(estimate.transport) : "Quotation Required",
+      installation: estimate ? formatCurrency(estimate.installationLabour) : "Quotation Required",
       insulation: estimate ? formatCurrency(estimate.insulation) : "Quotation Required",
-      flashingGutters: estimate ? formatCurrency(estimate.flashingGutters) : "Quotation Required",
+      roofAreaQuantity: area === null ? "Quantity Required" : `${area.toFixed(1)} sq ft`,
       totalInstalled: estimate
         ? `${formatCurrency(estimate.totalMinimum)}–${formatCurrency(estimate.totalMaximum)} · average ${formatCurrency(estimate.totalAverage)}`
         : "Quotation Required",
@@ -385,11 +638,11 @@ function RoofCalculator({ calculator, onDimensionChange, onOptionChange }) {
     <div className="roof-calculator">
       <h3 className="infra-subheading">Roof option cost calculator</h3>
       <p className="note">
-        Enter measured building dimensions and written quote values. Roof area includes the entered uniform overhang on all sides and
-        slope as rise/run percent across the roof width; it is not assumed to be 800 sq ft. For non-symmetric roof forms, use a measured
-        surface area from the final drawing instead.
+        Enter measured building dimensions, roof shape, overhang, slope and written quote values. The footprint is not assumed to cover
+        the 800 sq ft plot. For non-rectangular roof forms, use the measured surface area from the approved drawing instead.
       </p>
       <p className="note">These roof options are mutually exclusive estimates. Calculator results are not added to the BOQ automatically; select one approved scope and reconcile its components once before revising the project budget.</p>
+      <p className="note">Selected roof arrangement to compare: <strong>{roofShape}</strong>. The entered slope is rise/run for each roof plane.</p>
       <div className="roof-dimensions">
         {dimensionFields.map(([field, label]) => (
           <label key={field}>
@@ -411,7 +664,9 @@ function RoofCalculator({ calculator, onDimensionChange, onOptionChange }) {
       <div className="roof-option-grid">
         {roofingOptions.map((option) => {
           const inputs = calculator.options[option.id];
-          const estimate = calculateRoofOptionCost(area, inputs);
+          const estimate = option.id === "puf" && !inputs.thickness
+            ? null
+            : calculateRoofOptionCost(area, inputs);
           return (
             <article className="roof-option-card" key={option.id}>
               <h4>{option.option}</h4>
@@ -419,6 +674,7 @@ function RoofCalculator({ calculator, onDimensionChange, onOptionChange }) {
                 <label>
                   <span>PUF panel thickness</span>
                   <select value={inputs.thickness} onChange={(event) => onOptionChange(option.id, "thickness", event.target.value)}>
+                    <option value="">Select thickness</option>
                     {pufThicknesses.map((thickness) => <option value={thickness} key={thickness}>{thickness} mm</option>)}
                   </select>
                 </label>
@@ -426,12 +682,18 @@ function RoofCalculator({ calculator, onDimensionChange, onOptionChange }) {
               <div className="roof-cost-inputs">
                 {roofCostFields.map((field) => (
                   <label key={field}>
-                    <span>{field === "materialMinRate" ? "Material quote minimum (₹/sq ft)"
-                      : field === "materialMaxRate" ? "Material quote maximum (₹/sq ft)"
-                        : field === "structuralSupport" ? "Structural support (₹)"
-                          : field === "installation" ? "Installation (₹)"
-                            : field === "insulation" ? "Separate insulation (₹)"
-                              : "Flashing and gutters (₹)"}</span>
+                      <span>{({
+                        materialMinRate: "Material rate minimum (₹ / sq ft)",
+                        materialMaxRate: "Material rate maximum (₹ / sq ft)",
+                        structuralSupport: "Structural supports / framing (₹)",
+                        fabricationLabour: "Fabrication labour (₹)",
+                        installationLabour: "Installation labour (₹)",
+                        insulation: "Separate insulation (₹; enter 0 only if integrated)",
+                        ceiling: "Moisture-resistant ceiling (₹)",
+                        fasteners: "Fasteners and roof screws / washers (₹)",
+                        flashingGutters: "Ridge, flashing, gutters and downpipes (₹)",
+                        transport: "Transportation / unloading (₹)",
+                      })[field]}</span>
                     <input
                       type="number"
                       min="0"
@@ -445,7 +707,7 @@ function RoofCalculator({ calculator, onDimensionChange, onOptionChange }) {
               </div>
               <p className="quote-cost">
                 <strong>{estimate ? `${formatCurrency(estimate.totalMinimum)}–${formatCurrency(estimate.totalMaximum)}` : "Quotation Required"}</strong>
-                <span>{estimate ? `Installed average: ${formatCurrency(estimate.totalAverage)}` : "Complete dimensions and all component quote fields to calculate."}</span>
+                <span>{estimate ? `Average installed total: ${formatCurrency(estimate.totalAverage)} · material: ${formatCurrency(estimate.averageMaterialCost)} · labour: ${formatCurrency(estimate.fabricationLabour + estimate.installationLabour)}` : "Complete dimensions, material rate range and every component cost to calculate."}</span>
               </p>
               {option.id === "puf" && <p className="note">Enter 0 for separate insulation only when the panel's integrated insulation is confirmed to cover the design need.</p>}
             </article>
@@ -458,11 +720,14 @@ function RoofCalculator({ calculator, onDimensionChange, onOptionChange }) {
           { key: "option", label: "Roof option" },
           { key: "thickness", label: "Material thickness" },
           { key: "roofArea", label: "Calculated roof area" },
+          { key: "rate", label: "Material average rate / sq ft" },
           { key: "materialRange", label: "Material cost range" },
-          { key: "structuralSupport", label: "Structural support" },
+          { key: "materialAverage", label: "Average material cost" },
+          { key: "roofAreaQuantity", label: "Material quantity" },
+          { key: "labour", label: "Fabrication + installation labour" },
+          { key: "transport", label: "Transportation" },
           { key: "installation", label: "Installation" },
           { key: "insulation", label: "Insulation" },
-          { key: "flashingGutters", label: "Flashing and gutters" },
           { key: "totalInstalled", label: "Total installed cost" },
         ]}
         rows={comparisonRows}
@@ -471,16 +736,18 @@ function RoofCalculator({ calculator, onDimensionChange, onOptionChange }) {
   );
 }
 
-function QuoteSlotForm({ item, slot, quote, onChange }) {
+function QuoteSlotForm({ item, slot, quote, onChange, quantity }) {
   const fields = [
     ["supplier", "Supplier name", "text"],
+    ["contact", "Supplier contact", "text"],
     ["model", "Product model", "text"],
     ["specification", "Quoted specification", "text"],
-    ["quotedUnitPrice", "Quoted unit price (₹)", "number"],
-    ["gst", "GST (₹ / %; specify basis)", "text"],
+    ["quotedUnitPrice", "Quoted unit price (₹ / unit)", "number"],
+    ["gst", "GST amount (₹)", "number"],
     ["transport", "Transport (₹)", "number"],
     ["installation", "Installation (₹)", "number"],
     ["warranty", "Warranty", "text"],
+    ["deliveryTerms", "Delivery terms", "text"],
     ["quoteDate", "Quote date", "date"],
     ["validUntil", "Quote valid until", "date"],
     ["selectedPrice", "Final selected price (₹)", "number"],
@@ -515,7 +782,308 @@ function QuoteSlotForm({ item, slot, quote, onChange }) {
         <span>Supplier comparison / notes</span>
         <textarea value={quote.comparison} rows="2" onChange={(event) => onChange(item.id, slot, "comparison", event.target.value)} />
       </label>
+      <p className="quote-cost">
+        <strong>Landed quote total: {formatCost(getQuoteLandedCost(quote, quantity))}</strong>
+        <span>Requires a reliable quote, measured quantity, GST amount, transport and installation. Delivery terms are recorded separately.</span>
+      </p>
     </fieldset>
+  );
+}
+
+function InlineNumberField({ value, label, onChange, min = "0", step = "any" }) {
+  return (
+    <label className="compact-input">
+      <span>{label}</span>
+      <input type="number" min={min} step={step} inputMode="decimal" aria-label={label}
+        value={value ?? ""} onChange={(event) => onChange(event.target.value)} />
+    </label>
+  );
+}
+
+function ConstructionAssumptionsPanel({ assumptions, brickOptions, wallResults, onAssumptionChange, onBrickChange }) {
+  const dimensionFields = [
+    ["plotWidth", "Plot width (ft)"], ["plotLength", "Plot length (ft)"],
+    ["frontSetback", "Front setback (ft)"], ["rearSetback", "Rear setback (ft)"],
+    ["leftSetback", "Left setback (ft)"], ["rightSetback", "Right setback (ft)"],
+    ["buildingWidth", "Building width (ft)"], ["buildingLength", "Building length (ft)"],
+    ["wallHeight", "Proposed wall height (ft)"], ["wallThickness", "External wall thickness (ft)"],
+    ["partitionThickness", "Internal partition thickness (ft)"],
+  ];
+  const wallFields = [
+    ["externalOpeningsArea", "External door/window openings (sq ft)"],
+    ["partitionLength", "Total internal partition length (ft)"],
+    ["partitionHeight", "Internal partition height (ft)"],
+    ["partitionOpeningsArea", "Internal partition openings (sq ft)"],
+    ["brickWastagePercent", "Brick wastage allowance (%)"],
+    ["mortarJoint", "Mortar joint thickness (in)"],
+    ["cementParts", "Cement parts in mortar mix"],
+    ["sandParts", "Sand parts in mortar mix"],
+    ["mortarDryFactor", "Mortar dry-volume factor"],
+    ["cementBagVolume", "Cement bag volume (cu ft / bag)"],
+  ];
+  return (
+    <div className="assumptions-panel">
+      <h3 className="infra-subheading">Editable construction assumptions</h3>
+      <p className="note">
+        Plot defaults reflect the stated 20 ft × 40 ft site; the building footprint and setbacks are separate and intentionally blank.
+        No wall, roof or material quantity is inferred from plot area.
+      </p>
+      <div className="assumption-grid">
+        {dimensionFields.map(([field, label]) => (
+          <label key={field}><span>{label}</span><input type="number" min="0" step="any"
+            value={assumptions[field]} onChange={(event) => onAssumptionChange(field, event.target.value)} /></label>
+        ))}
+        <label>
+          <span>Preferred wall type</span>
+          <select value={assumptions.wallType} onChange={(event) => onAssumptionChange("wallType", event.target.value)}>
+            {["Solid cement bricks", "Hollow concrete blocks", "Other locally suitable blocks"].map((item) => <option key={item}>{item}</option>)}
+          </select>
+        </label>
+        <label>
+          <span>Preferred roof option</span>
+          <select value={assumptions.roofSelection} onChange={(event) => onAssumptionChange("roofSelection", event.target.value)}>
+            {["Undecided", ...roofingOptions.map((option) => option.option)].map((item) => <option key={item}>{item}</option>)}
+          </select>
+        </label>
+        <label>
+          <span>Roof shape to compare</span>
+          <select value={assumptions.roofShape} onChange={(event) => onAssumptionChange("roofShape", event.target.value)}>
+            {["Undecided", "Gable", "Single-slope"].map((item) => <option key={item}>{item}</option>)}
+          </select>
+        </label>
+      </div>
+      <h4>Wall quantity inputs · external walls and partitions are calculated separately</h4>
+      <div className="assumption-grid">
+        {wallFields.map(([field, label]) => (
+          <label key={field}><span>{label}</span><input type="number" min="0" step="any"
+            value={assumptions[field]} onChange={(event) => onAssumptionChange(field, event.target.value)} /></label>
+        ))}
+      </div>
+      <div className="brick-options">
+        {["A", "B", "C"].map((option) => {
+          const brick = brickOptions[option];
+          const result = wallResults[option];
+          const length = getInputNumber(brick.length);
+          const height = getInputNumber(brick.height);
+          const joint = getInputNumber(assumptions.mortarJoint);
+          const piecesPerSqFt = length && height && joint !== null
+            ? 144 / ((length + joint) * (height + joint))
+            : null;
+          return (
+            <article className="brick-option-card" key={option}>
+              <h4>Solid cement brick · local option {option}</h4>
+              <label className="brick-option-select">
+                <input type="radio" name="brickOption" checked={assumptions.brickOption === option}
+                  onChange={() => onAssumptionChange("brickOption", option)} />
+                Use as selected wall option
+              </label>
+              <div className="assumption-grid">
+                {[
+                  ["length", "Length (in)"], ["width", "Width (in)"], ["height", "Height (in)"],
+                  ["weight", "Weight (kg / piece, if supplied)"], ["strength", "Manufacturer strength specification"],
+                ].map(([field, label]) => (
+                  <label key={field}><span>{label}</span><input type={field === "strength" ? "text" : "number"}
+                    min={field === "strength" ? undefined : "0"} step="any" value={brick[field]}
+                    onChange={(event) => onBrickChange(option, field, event.target.value)} /></label>
+                ))}
+              </div>
+              <p>Pieces / sq ft: <strong>{piecesPerSqFt === null ? "Enter size and joint" : piecesPerSqFt.toFixed(2)}</strong></p>
+              <p>External bricks: <strong>{result?.externalBricks ?? "Enter dimensions and openings"}</strong></p>
+              <p>Internal partition bricks: <strong>{result?.partitionBricks ?? "Enter partition dimensions"}</strong></p>
+              <p>Total bricks with entered wastage: <strong>{result?.totalBricks ?? "Quotation Required"}</strong></p>
+              <p>External wall mortar: <strong>{!result || result.externalMortarVolume === null ? "Quotation Required" : `${result.externalMortarVolume.toFixed(2)} cu ft`}</strong></p>
+              <p>Partition mortar: <strong>{!result || result.partitionMortarVolume === null ? "Quotation Required" : `${result.partitionMortarVolume.toFixed(2)} cu ft`}</strong></p>
+              <p>Total mortar: <strong>{!result || result.mortarVolume === null ? "Quotation Required" : `${result.mortarVolume.toFixed(2)} cu ft`}</strong></p>
+            </article>
+          );
+        })}
+      </div>
+      <p className="note">
+        Brick size, weight, strength, wastage, openings, mortar joint and mix are user-entered. External-wall and partition cement/sand
+        quantities are calculated independently; each remains unavailable until its own dimensions, thickness and mortar inputs are complete.
+      </p>
+    </div>
+  );
+}
+
+function CostExplorerTable({ items, state, quantityForItem, onQuantityChange, onCostInputChange }) {
+  const rows = items.map((item) => {
+    const quantity = quantityForItem(item);
+    const summary = getCostRow(item, state, quantity);
+    const input = state.costInputs[item.id];
+    return {
+      ...item,
+      quantityValue: quantity,
+      summary,
+      marketInput: (
+        <div className="range-inputs">
+          <InlineNumberField value={input.marketMinimum} label={`${item.item} estimated market minimum per ${item.unit}`}
+            onChange={(value) => onCostInputChange(item.id, "marketMinimum", value)} />
+          <InlineNumberField value={input.marketMaximum} label={`${item.item} estimated market maximum per ${item.unit}`}
+            onChange={(value) => onCostInputChange(item.id, "marketMaximum", value)} />
+        </div>
+      ),
+      labourInput: (
+        <div className="range-inputs">
+          <InlineNumberField value={input.laborMinimumRate} label={`${item.item} local worker minimum labour rate per ${item.unit}`}
+            onChange={(value) => onCostInputChange(item.id, "laborMinimumRate", value)} />
+          <InlineNumberField value={input.laborMaximumRate} label={`${item.item} local worker maximum labour rate per ${item.unit}`}
+            onChange={(value) => onCostInputChange(item.id, "laborMaximumRate", value)} />
+        </div>
+      ),
+      sourceInput: (
+        <label className="compact-input">
+          <span>Price source</span>
+          <select value={input.materialSource} onChange={(event) => onCostInputChange(item.id, "materialSource", event.target.value)}>
+            <option value="not-set">Not set</option>
+            <option value="market">Estimated market price</option>
+            <option value="supplier">Supplier quotation</option>
+          </select>
+        </label>
+      ),
+      taxInput: input.materialSource === "supplier"
+        ? formatCost(summary.tax)
+        : <InlineNumberField value={input.tax} label={`${item.item} tax / GST amount`}
+          onChange={(value) => onCostInputChange(item.id, "tax", value)} />,
+      transportInput: input.materialSource === "supplier"
+        ? formatCost(summary.transport)
+        : <InlineNumberField value={input.transport} label={`${item.item} transportation cost`}
+          onChange={(value) => onCostInputChange(item.id, "transport", value)} />,
+      installationInput: input.materialSource === "supplier"
+        ? formatCost(summary.installation)
+        : <InlineNumberField value={input.installation} label={`${item.item} installation cost`}
+          onChange={(value) => onCostInputChange(item.id, "installation", value)} />,
+      sourceNoteInput: (
+        <label className="compact-input">
+          <span>Rate / quote reference</span>
+          <input value={input.sourceNote} onChange={(event) => onCostInputChange(item.id, "sourceNote", event.target.value)} />
+        </label>
+      ),
+    };
+  });
+
+  return (
+    <DataTable
+      caption="Blank values remain Quotation Required. Enter 0 only when a quote confirms a component is not applicable or included elsewhere."
+      className="cost-explorer-table"
+      rows={rows}
+      columns={[
+        { key: "item", label: "Item" },
+        { key: "specification", label: "Specification" },
+        { key: "unit", label: "Unit" },
+        { key: "quantityValue", label: "Quantity", render: (item) => (
+          <div>
+            <QuantityField item={item} value={item.quantityValue ?? ""} onChange={onQuantityChange} />
+            <small>{item.quantityBasis}</small>
+          </div>
+        ) },
+        { key: "sourceInput", label: "Rate source" },
+        { key: "minimumRate", label: "Minimum unit cost", render: (item) => formatCost(item.summary.minimumRate) },
+        { key: "maximumRate", label: "Maximum unit cost", render: (item) => formatCost(item.summary.maximumRate) },
+        { key: "unitCost", label: "Average unit cost", render: (item) => formatCost(item.summary.unitCost) },
+        { key: "marketInput", label: "Editable estimated market range" },
+        { key: "supplier", label: "Supplier quote range / average", render: (item) => item.summary.supplierSummary.reliableQuoteCount
+          ? `${formatCurrency(item.summary.supplierSummary.minimum)}–${formatCurrency(item.summary.supplierSummary.maximum)} · avg ${formatCurrency(item.summary.supplierSummary.averageUnitCost)}`
+          : item.summary.supplierSummary.status },
+        { key: "materialTotal", label: "Material total / average total", render: (item) => formatCost(item.summary.materialTotal) },
+        { key: "labourInput", label: "Editable local worker rate range" },
+        { key: "laborTotal", label: "Labour total", render: (item) => formatCost(item.summary.laborTotal) },
+        { key: "taxInput", label: "Tax / GST" },
+        { key: "transportInput", label: "Transportation" },
+        { key: "installationInput", label: "Installation" },
+        { key: "finalAverageTotal", label: "Final average total", render: (item) => formatCost(item.summary.finalAverageTotal) },
+        { key: "actualPurchaseTotal", label: "Actual purchase cost", render: (item) => formatCost(item.summary.actualPurchaseTotal) },
+        { key: "sourceNoteInput", label: "Source / worker / supplier notes" },
+        { key: "priority", label: "Scope / selection status" },
+      ]}
+    />
+  );
+}
+
+function LocalLabourEstimator({ rates, entries, onRateChange, onEntryChange }) {
+  const taskAmounts = labourTasks.map((task) => {
+    const entry = entries[task.id];
+    const rate = rates[task.trade];
+    return calculateDailyLabour({
+      ...entry,
+      minimumRate: rate.minimumRate,
+      maximumRate: rate.maximumRate,
+    });
+  });
+  const complete = taskAmounts.every((amount) => amount !== null);
+  const total = complete ? taskAmounts.reduce((sum, amount) => sum + amount, 0) : null;
+
+  return (
+    <div className="labor-estimator">
+      <h3 className="infra-subheading">Local labour cost estimator</h3>
+      <p className="note">
+        Preliminary regional reference ranges supplied for planning only; not confirmed Kanipakam wages. Edit to negotiated local rates.
+        The daily-wage or contract method is exclusive for each task.
+      </p>
+      <DataTable
+        caption="Editable reference wages (₹ per worker per day)"
+        rows={labourTrades.map((trade) => ({ ...trade, rateFields: (
+          <div className="range-inputs">
+            <InlineNumberField value={rates[trade.id].minimumRate} label={`${trade.label} minimum daily wage`}
+              onChange={(value) => onRateChange(trade.id, "minimumRate", value)} />
+            <InlineNumberField value={rates[trade.id].maximumRate} label={`${trade.label} maximum daily wage`}
+              onChange={(value) => onRateChange(trade.id, "maximumRate", value)} />
+          </div>
+        ) }))}
+        columns={[
+          { key: "label", label: "Trade" },
+          { key: "rateFields", label: "Editable reference range (₹ / day)" },
+        ]}
+      />
+      <DataTable
+        caption="Daily wage total = average rate × workers × working days. Contract mode uses the fixed total or contract rate × quantity instead."
+        rows={labourTasks.map((task, index) => {
+          const entry = entries[task.id];
+          return {
+            ...task,
+            methodInput: (
+              <label className="compact-input">
+                <span>Cost method</span>
+                <select value={entry.method} onChange={(event) => onEntryChange(task.id, "method", event.target.value)}>
+                  <option value="daily">Daily wages</option>
+                  <option value="contract">Activity / sq ft contract</option>
+                </select>
+              </label>
+            ),
+            dailyInputs: entry.method === "daily" ? (
+              <div className="range-inputs">
+                <InlineNumberField value={entry.workers} label={`${task.label} worker count`}
+                  onChange={(value) => onEntryChange(task.id, "workers", value)} />
+                <InlineNumberField value={entry.days} label={`${task.label} working days`}
+                  onChange={(value) => onEntryChange(task.id, "days", value)} />
+              </div>
+            ) : "Not used for contract method",
+            contractInputs: entry.method === "contract" ? (
+              <div className="range-inputs">
+                <InlineNumberField value={entry.contractRate} label={`${task.label} contract rate per unit`}
+                  onChange={(value) => onEntryChange(task.id, "contractRate", value)} />
+                <InlineNumberField value={entry.contractQuantity} label={`${task.label} contracted quantity`}
+                  onChange={(value) => onEntryChange(task.id, "contractQuantity", value)} />
+                <InlineNumberField value={entry.contractAmount} label={`${task.label} fixed activity contract total`}
+                  onChange={(value) => onEntryChange(task.id, "contractAmount", value)} />
+              </div>
+            ) : "Not used for daily method",
+            total: taskAmounts[index] === null ? "Quotation Required" : formatCurrency(taskAmounts[index]),
+          };
+        })}
+        columns={[
+          { key: "label", label: "Work activity" },
+          { key: "methodInput", label: "Pricing method" },
+          { key: "dailyInputs", label: "Daily wage inputs" },
+          { key: "contractInputs", label: "Contract inputs" },
+          { key: "total", label: "Calculated labour cost" },
+        ]}
+      />
+      <p className="labor-total">
+        Complete labour task estimate: <strong>{total === null ? "Quotation Required" : formatCurrency(total)}</strong>
+        {!complete && <span> · {taskAmounts.filter((amount) => amount !== null).length} of {taskAmounts.length} activities entered</span>}
+      </p>
+    </div>
   );
 }
 
@@ -553,6 +1121,48 @@ function InfrastructurePage() {
     setProcurementState((current) => ({
       ...current,
       quantities: { ...current.quantities, [itemId]: value },
+    }));
+  };
+  const updateCostInput = (itemId, field, value) => {
+    setProcurementState((current) => ({
+      ...current,
+      costInputs: {
+        ...current.costInputs,
+        [itemId]: { ...current.costInputs[itemId], [field]: value },
+      },
+    }));
+  };
+  const updateConstructionAssumption = (field, value) => {
+    setProcurementState((current) => ({
+      ...current,
+      constructionAssumptions: { ...current.constructionAssumptions, [field]: value },
+    }));
+  };
+  const updateBrickOption = (option, field, value) => {
+    setProcurementState((current) => ({
+      ...current,
+      brickOptions: {
+        ...current.brickOptions,
+        [option]: { ...current.brickOptions[option], [field]: value },
+      },
+    }));
+  };
+  const updateLaborRate = (trade, field, value) => {
+    setProcurementState((current) => ({
+      ...current,
+      laborRates: {
+        ...current.laborRates,
+        [trade]: { ...current.laborRates[trade], [field]: value },
+      },
+    }));
+  };
+  const updateLaborEntry = (taskId, field, value) => {
+    setProcurementState((current) => ({
+      ...current,
+      laborEntries: {
+        ...current.laborEntries,
+        [taskId]: { ...current.laborEntries[taskId], [field]: value },
+      },
     }));
   };
   const updateQuote = (itemId, slot, field, value) => {
@@ -604,7 +1214,7 @@ function InfrastructurePage() {
     link.href = url;
     link.download = "greenspore-procurement-quotes.json";
     link.click();
-    URL.revokeObjectURL(url);
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     setFileMessage("Quote tracker exported. Share this JSON file with the other founders.");
   };
   const importQuoteFile = async (event) => {
@@ -625,25 +1235,40 @@ function InfrastructurePage() {
 
   const selectedProcurementItem = allProcurementItems.find((item) => item.id === selectedProcurementId) || allProcurementItems[0];
   const selectedQuotes = procurementState.quotes[selectedProcurementItem.id] || {};
-  const selectedCost = getItemCostSummary(selectedQuotes, procurementState.quantities[selectedProcurementItem.id]);
+  const selectedCost = getCostRow(
+    selectedProcurementItem,
+    procurementState,
+    getInputNumber(procurementState.quantities[selectedProcurementItem.id]),
+  );
   const costSummaryFor = (itemId) => getItemCostSummary(procurementState.quotes[itemId], procurementState.quantities[itemId]);
+  const wallEstimates = getWallEstimates(procurementState.constructionAssumptions, procurementState.brickOptions);
+  const quantityForItem = (item) => getCalculatedQuantity(item, procurementState, wallEstimates);
   const boqRows = allProcurementItems.map((item) => {
-    const summary = getItemCostSummary(procurementState.quotes[item.id], procurementState.quantities[item.id]);
+    const quantity = quantityForItem(item);
+    const cost = getCostRow(item, procurementState, quantity);
     return {
       ...item,
-      summary,
+      cost,
+      summary: {
+        ...cost.supplierSummary,
+        minimum: cost.minimumRate,
+        maximum: cost.maximumRate,
+        averageUnitCost: cost.unitCost,
+        averageTotalCost: cost.finalAverageTotal,
+      },
+      priced: cost.finalAverageTotal !== null,
       budgetParent: getBudgetParent(item),
       budgetNote: getBudgetNote(item),
     };
   });
   const baselineReconciliationRows = existingBudget.map((budget) => {
     const items = boqRows.filter((item) => item.budgetParent === budget.category);
-    const priced = items.filter((item) => item.summary.averageTotalCost !== null);
+    const priced = items.filter((item) => item.priced);
     return {
       category: budget.category,
       baseline: `${formatCurrency(budget.low)}–${formatCurrency(budget.high)}`,
-      itemizedRows: `${priced.length} of ${items.length} have both quantity and reliable quote`,
-      status: "No new subtotal: choose alternatives and reconcile overlaps before any revised total.",
+      itemizedRows: `${priced.length} of ${items.length} have complete quantities, source-backed rates and cost components`,
+      status: "Mapped to preserved baseline; select alternatives and reconcile overlaps before any revised total.",
     };
   });
   const outsideBaselineRows = boqRows.filter(isPotentiallyOutsideBaseline).map((item) => ({
@@ -656,6 +1281,32 @@ function InfrastructurePage() {
     groups[item.category].push(item);
     return groups;
   }, {});
+  const actualExpenditure = boqRows.reduce((total, item) => total + (item.cost.actualPurchaseTotal ?? 0), 0);
+  const actualPurchaseCount = boqRows.filter((item) => item.cost.actualPurchaseTotal !== null).length;
+  const constructionSummaryRows = constructionGroups.map((group) => {
+    const items = boqRows.filter((item) => item.category === group.title);
+    const actualItems = items.filter((item) => item.cost.actualPurchaseTotal !== null);
+    const completeEstimates = items.filter((item) => item.cost.finalAverageTotal !== null);
+    const categoryActual = actualItems.reduce((total, item) => total + item.cost.actualPurchaseTotal, 0);
+    return {
+      category: group.title,
+      itemizedProgress: `${completeEstimates.length} of ${items.length} line items have complete cost inputs`,
+      estimate: "Quotation Required",
+      actual: actualItems.length ? formatCurrency(categoryActual) : "No purchases recorded",
+      actualItems: `${actualItems.length} purchased line items recorded`,
+    };
+  });
+  const roofArea = calculateRoofArea(procurementState.roofCalculator.dimensions);
+  const roofComparisonRows = roofingOptions.map((option) => {
+    const optionInputs = procurementState.roofCalculator.options[option.id];
+    const estimate = option.id === "puf" && !optionInputs.thickness
+      ? null
+      : calculateRoofOptionCost(roofArea, optionInputs);
+    return {
+      ...option,
+      initialCost: estimate ? `${formatCurrency(estimate.totalMinimum)}–${formatCurrency(estimate.totalMaximum)} · avg ${formatCurrency(estimate.totalAverage)}` : "Quotation Required",
+    };
+  });
   const scheduleWeeks = Math.max(...roadmap.slice(0, 8).map((phase) => phase.start + phase.span));
 
   return (
@@ -757,175 +1408,96 @@ function InfrastructurePage() {
         </section>
 
         <section id="construction" className="infra-section">
-          <SectionTitle eyebrow="03 · Civil and construction scope" title="SHED CONSTRUCTION &amp; CIVIL INFRASTRUCTURE">
-            Itemized planning scope for the 20 ft × 40 ft plot. Quantities remain measurement-based and structural dimensions are left
-            to site assessment and signed engineering drawings. Averages appear only after reliable current written quotations are entered.
+          <SectionTitle eyebrow="03 · Civil and construction scope" title="ECONOMICAL SHED CONSTRUCTION &amp; MUSHROOM-FARM INFRASTRUCTURE">
+            A 20 ft × 40 ft Kanipakam-area plot with locally available cement-brick masonry and negotiated local labour as the starting
+            approach. Building footprint, openings, roof geometry, material quantities and prices stay editable and unassumed until measured.
           </SectionTitle>
+          <p className="note">All twelve cost categories are collapsed by default. Market rates, supplier quotations, local worker estimates and actual purchases are kept distinct. The existing ₹6.08–₹11.70 lakh baseline is preserved and detailed rows are not added to it automatically.</p>
           <div className="accordion-stack">
-            {constructionGroups.map((group) => (
+            {constructionGroups.map((group, index) => (
               <details className="plan-accordion" key={group.title}>
-                <summary>{group.title}<span>{group.items.length} work items · rates require reliable written quotes</span></summary>
-                <DataTable
-                  rows={group.items.map((item) => ({
-                    ...item,
-                    summary: getItemCostSummary(procurementState.quotes[item.id], procurementState.quantities[item.id]),
-                  }))}
-                  caption={`${group.title}. Quantities are planning bases until measured; no unverified prices are shown.`}
-                  columns={[
-                    { key: "item", label: "Work item" },
-                    { key: "description", label: "Description / specification" },
-                    { key: "unit", label: "Measurement unit" },
-                    { key: "quantity", label: "Estimated quantity", render: (item) => (
-                      <div><QuantityField item={item} value={procurementState.quantities[item.id]} onChange={updateQuantity} /><small>{item.quantityBasis}</small></div>
-                    ) },
-                    { key: "minimum", label: "Minimum unit rate", render: (item) => formatCost(item.summary.minimum) },
-                    { key: "maximum", label: "Maximum unit rate", render: (item) => formatCost(item.summary.maximum) },
-                    { key: "average", label: "Average unit rate", render: (item) => formatCost(item.summary.averageUnitCost) },
-                    { key: "total", label: "Average total amount", render: (item) => formatTotalCost(item.summary) },
-                    { key: "priority", label: "Essential / optional" },
-                  ]}
+                <summary>{group.title}<span>{group.items.length} itemized lines · rates and unmeasured quantities remain pending</span></summary>
+                {index === 1 && (
+                  <ConstructionAssumptionsPanel
+                    assumptions={procurementState.constructionAssumptions}
+                    brickOptions={procurementState.brickOptions}
+                    wallResults={wallEstimates}
+                    onAssumptionChange={updateConstructionAssumption}
+                    onBrickChange={updateBrickOption}
+                  />
+                )}
+                {index === 2 && (
+                  <>
+                    <RoofCalculator
+                      calculator={procurementState.roofCalculator}
+                      roofShape={procurementState.constructionAssumptions.roofShape}
+                      onDimensionChange={updateRoofDimension}
+                      onOptionChange={updateRoofOption}
+                    />
+                    <DataTable
+                      caption="Four roof systems only. Service life is not estimated; use manufacturer evidence for the selected product."
+                      rows={roofComparisonRows}
+                      columns={[
+                        { key: "option", label: "Roof system / initial installed cost" },
+                        { key: "initialCost", label: "Calculated installed range / average" },
+                        { key: "thermal", label: "Heat resistance" },
+                        { key: "condensation", label: "Condensation control" },
+                        { key: "leakage", label: "Rainwater leakage risk" },
+                        { key: "corrosion", label: "Corrosion protection" },
+                        { key: "noise", label: "Rain noise" },
+                        { key: "maintenance", label: "Maintenance" },
+                        { key: "lifespan", label: "Expected service life evidence" },
+                      ]}
+                    />
+                    <div className="reconciliation-note">
+                      <h3>Economical comparison starting point · not a cost claim</h3>
+                      <p>First price Option 2—coated Galvalume sheets with one coordinated insulation and moisture-resistant ceiling assembly—against Option 3 PUF panels. The separate-layer approach is a practical local-construction candidate, not an asserted lowest-cost choice. Select only after comparable delivered and installed quotations, thermal/condensation review and product documentation.</p>
+                    </div>
+                    <p className="note">Roof systems are mutually exclusive. The roof calculator is a comparison aid and is not included in BOQ totals until one option and its components are reconciled. Never specify asbestos-containing roofing.</p>
+                  </>
+                )}
+                {index === 3 && (
+                  <>
+                    <DataTable
+                      caption="Compare performance and cost separately by room; do not count roof insulation again as ceiling insulation."
+                      rows={[
+                        { room: "Dry straw storage", requirement: "Prioritize dry protection, condensation control and ventilation; add insulation only if site heat/moisture assessment justifies it." },
+                        { room: "Incubation rooms", requirement: "Coordinate insulated roof/walls, sealed penetrations and temperature stability to the selected strain protocol." },
+                        { room: "Oyster fruiting room", requirement: "Design insulation, vapour control and washable surfaces around humidity, fresh-air and condensation loads." },
+                        { room: "Milky fruiting room", requirement: "Assess independently from Oyster; confirm casing and washdown implications with the cultivation specialist." },
+                        { room: "Packing area", requirement: "Use a cleanable moisture-resistant ceiling; size thermal insulation only for verified comfort/product needs." },
+                      ]}
+                      columns={[
+                        { key: "room", label: "Room" },
+                        { key: "requirement", label: "Performance / costing requirement" },
+                      ]}
+                    />
+                    <DataTable
+                      rows={ceilingInsulationNotes}
+                      columns={[
+                        { key: "type", label: "Insulation location" },
+                        { key: "description", label: "Coordination rule" },
+                      ]}
+                    />
+                  </>
+                )}
+                <CostExplorerTable
+                  items={group.items}
+                  state={procurementState}
+                  quantityForItem={quantityForItem}
+                  onQuantityChange={updateQuantity}
+                  onCostInputChange={updateCostInput}
                 />
               </details>
             ))}
           </div>
-          <h3 className="infra-subheading">Structural framework comparison</h3>
-          <DataTable
-            columns={[
-              { key: "option", label: "Structural system" },
-              { key: "advantages", label: "Advantages" },
-              { key: "disadvantages", label: "Disadvantages / design checks" },
-              { key: "maintenance", label: "Maintenance" },
-              { key: "cost", label: "Cost basis" },
-            ]}
-            rows={structuralOptions}
+          <LocalLabourEstimator
+            rates={procurementState.laborRates}
+            entries={procurementState.laborEntries}
+            onRateChange={updateLaborRate}
+            onEntryChange={updateLaborEntry}
           />
-          <p className="note">Do not infer foundation, column, truss or purlin sizes from this page. Soil assessment and a qualified structural engineer are required.</p>
-          <h3 className="infra-subheading">Floor finish by room</h3>
-          <DataTable
-            columns={[
-              { key: "room", label: "Room" },
-              { key: "specification", label: "Preliminary flooring specification" },
-            ]}
-            rows={flooringRoomSpecs}
-          />
-          <h3 className="infra-subheading">Wall system comparison</h3>
-          <DataTable
-            caption="All wall areas require a measured elevation schedule; rates and installation costs require written quotations."
-            columns={[
-              { key: "option", label: "Wall option" },
-              { key: "specification", label: "Material specification" },
-              { key: "estimatedArea", label: "Estimated area basis" },
-              { key: "unitRate", label: "Rate / sq ft" },
-              { key: "minimum", label: "Minimum cost" },
-              { key: "maximum", label: "Maximum cost" },
-              { key: "average", label: "Average cost" },
-              { key: "installation", label: "Installation cost" },
-              { key: "maintenance", label: "Maintenance" },
-            ]}
-            rows={wallOptions.map((option) => {
-              const item = allProcurementItems.find((candidate) => candidate.item === option.option);
-              const quantity = Number(procurementState.quantities[item?.id]);
-              const summary = item ? costSummaryFor(item.id) : null;
-              return {
-                ...option,
-                unitRate: formatCost(summary?.averageUnitCost ?? null),
-                minimum: Number.isFinite(quantity) && quantity > 0 && summary?.minimum !== null
-                  ? formatCurrency(quantity * summary.minimum)
-                  : summary?.reliableQuoteCount ? "Quantity Required" : "Quotation Required",
-                maximum: Number.isFinite(quantity) && quantity > 0 && summary?.maximum !== null
-                  ? formatCurrency(quantity * summary.maximum)
-                  : summary?.reliableQuoteCount ? "Quantity Required" : "Quotation Required",
-                average: formatTotalCost(summary),
-                installation: formatCost(item ? getReliableQuoteFieldAverage(procurementState.quotes[item.id], "installation") : null),
-              };
-            })}
-          />
-          <h3 className="infra-subheading">Roofing Options – Comparison for GreenSpore Farms</h3>
-          <DataTable
-            columns={[
-              { key: "option", label: "Option" },
-              { key: "material", label: "Roof material" },
-              { key: "thickness", label: "Thickness" },
-              { key: "thermal", label: "Thermal performance" },
-              { key: "suitability", label: "Planning suitability" },
-              { key: "components", label: "Included system components to quote" },
-              { key: "maintenance", label: "Maintenance" },
-              { key: "lifespan", label: "Lifespan evidence" },
-            ]}
-            rows={roofingOptions}
-          />
-          <div className="equipment-notice">
-            <strong>PUF panel thickness comparison: {pufThicknesses.map((thickness) => `${thickness} mm`).join(", ")}.</strong>
-            <span>Compare manufacturer-certified thermal data, fire documentation, panel joins, installation and the whole installed assembly. Panel-only rates are not installed roof costs.</span>
-          </div>
-          <p className="note">
-            Never specify new asbestos-cement roofing. Fibre-cement may only be compared when the exact product is documented as asbestos-free.
-            No lifespan is asserted without manufacturer data for the selected product.
-          </p>
-          <RoofCalculator
-            calculator={procurementState.roofCalculator}
-            onDimensionChange={updateRoofDimension}
-            onOptionChange={updateRoofOption}
-          />
-          <h3 className="infra-subheading">Preliminary roof candidates by room</h3>
-          <DataTable
-            columns={[
-              { key: "room", label: "Room" },
-              { key: "candidate", label: "Option to compare first" },
-              { key: "validation", label: "Decision required before selection" },
-            ]}
-            rows={[
-              { room: "Oyster fruiting room", candidate: "Compare complete PUF roof assembly against coated steel roof with separate designed insulation and ceiling.", validation: "Validate strain conditions, heat load, vapour control, condensation and installed quotes." },
-              { room: "Milky fruiting room", candidate: "Compare complete PUF roof assembly against coated steel roof with separate designed insulation and ceiling.", validation: "Validate Milky strain/protocol and room conditions independently from Oyster." },
-              { room: "Incubation rooms", candidate: "Cost a coated steel roof with one coordinated insulation/ceiling assembly; compare PUF if thermal review warrants it.", validation: "Confirm crop-specific temperature, wall insulation, ceiling and any cooling need." },
-              { room: "Raw straw storage", candidate: "Compare coated steel roofing with appropriate condensation and rainwater control; insulation only if justified.", validation: "Keep storage dry; assess solar gain, ventilation, pests and roof-water discharge." },
-              { room: "Packing area", candidate: "Compare coated steel roofing with a cleanable ceiling/insulation assembly; compare PUF installed cost.", validation: "Confirm hygiene, thermal comfort and product-handling requirements." },
-            ]}
-          />
-          <h3 className="infra-subheading">Ceiling and insulation coordination</h3>
-          <DataTable
-            columns={[
-              { key: "type", label: "Insulation location" },
-              { key: "description", label: "Design distinction" },
-            ]}
-            rows={ceilingInsulationNotes}
-          />
-          <div className="reconciliation-note">
-            <h3>Recommended preliminary design · for costing only, not for construction</h3>
-            <p>Prepare comparable quotes for (1) a coated steel roof with a separately designed vapour/insulation/ceiling assembly and (2) a complete PUF panel roof. Keep any selected insulation layer visible in the BOQ once only. Choose after thermal review, room-specific humidity/condensation checks and landed installed-cost comparison.</p>
-          </div>
-          <h3 className="infra-subheading">Recommended preliminary shed configuration · subject to engineering and supplier validation</h3>
-          <DataTable
-            columns={[
-              { key: "system", label: "System" },
-              { key: "preliminary", label: "Preliminary costing configuration" },
-              { key: "validation", label: "Required before procurement/construction" },
-            ]}
-            rows={[
-              { system: "Structure", preliminary: "Obtain comparable galvanized-steel and properly protected MS frame quotes; do not choose a member size here.", validation: "Soil report, loads, wind/site conditions, connections, corrosion and signed structural design." },
-              { system: "Roof", preliminary: "Price a coated-steel roof with one coordinated insulation/ceiling assembly against a complete PUF roof assembly.", validation: "Measured sloped area, supplier data, condensation/vapour design, fire documentation and installed quotes." },
-              { system: "Walls", preliminary: "Use a locally serviceable external wall with washable finishes and sealed internal partitions; compare insulated panels for crop rooms.", validation: "Measured wall schedule, moisture/fire performance, thermal design, sealed joints and installation quotes." },
-              { system: "Floor", preliminary: "Specify a durable cleanable base, room-specific anti-skid finish and planned wet-area drainage.", validation: "Subgrade, structural loading, falls, drain locations, waterproofing and wastewater route." },
-              { system: "Insulation", preliminary: "Select one continuous, coordinated roof/wall/ceiling strategy; avoid counting the same insulation twice.", validation: "Envelope/thermal review and product data for the exact assembly." },
-              { system: "Doors", preliminary: "Use cleanable, moisture-resistant sealed doors where room conditions require them; opening sizes remain unselected.", validation: "Architectural door schedule, clear access, emergency egress and hardware." },
-              { system: "Drainage", preliminary: "Provide designed falls, trapped floor drains, clean-outs and controlled wastewater collection in wet zones.", validation: "Civil/plumbing drawings and local discharge requirements." },
-              { system: "Environmental controls", preliminary: "Separate Oyster and Milky monitoring, air and humidification systems; defer cooling until each crop room is assessed.", validation: "Strain protocol, dimensions/volume, thermal load, airflow, water quality and commissioning." },
-              { system: "Electrical", preliminary: "Install only from the connected-load schedule with protected equipment circuits.", validation: "Qualified electrician's final load calculation, cable/breaker selection, earthing and testing." },
-            ]}
-          />
-          <h3 className="infra-subheading">Preliminary connected-load schedule · ratings pending nameplates</h3>
-          <DataTable
-            caption="No cable sizes or breaker ratings are assumed. A qualified electrician must calculate final loads and protections."
-            columns={[
-              { key: "equipment", label: "Equipment group" },
-              { key: "room", label: "Room / location" },
-              { key: "quantity", label: "Quantity basis" },
-              { key: "unitPower", label: "Unit power" },
-              { key: "connectedLoad", label: "Connected load" },
-              { key: "status", label: "Status / dependency" },
-            ]}
-            rows={connectedLoadSchedule}
-          />
+          <p className="note">Do not calculate footing dimensions, reinforcement quantities, electrical ratings or cable sizes here. Use measured site data, approved drawings and qualified engineering / electrician review.</p>
         </section>
 
         <section id="equipment" className="infra-section infra-section-muted">
@@ -1155,6 +1727,29 @@ function InfrastructurePage() {
             ]}
             rows={existingBudget}
           />
+          <h3 className="infra-subheading">Construction cost summary · estimates are not yet reconciled</h3>
+          <p className="note">
+            Category estimates stay unavailable until comparable quotations, measured quantities and mutually exclusive options are reconciled
+            against the original budget. Actual purchases below are recorded separately and are not an estimate of remaining project cost.
+          </p>
+          <DataTable
+            caption="Twelve-category construction summary. No partial category subtotals are presented as complete estimates."
+            columns={[
+              { key: "category", label: "Construction category" },
+              { key: "itemizedProgress", label: "Complete cost inputs" },
+              { key: "minimumEstimate", label: "Minimum estimate", render: () => "Quotation Required" },
+              { key: "averageEstimate", label: "Average estimate", render: () => "Quotation Required" },
+              { key: "maximumEstimate", label: "Maximum estimate", render: () => "Quotation Required" },
+              { key: "actual", label: "Actual purchase amount recorded" },
+              { key: "actualItems", label: "Purchase record coverage" },
+            ]}
+            rows={constructionSummaryRows}
+          />
+          <p className="note">
+            Actual expenditure recorded across {actualPurchaseCount} line items: <strong>
+              {actualPurchaseCount ? formatCurrency(actualExpenditure) : "No purchases recorded"}
+            </strong>. Budget variance is unavailable until the selected scope and complete actual expenditure are reconciled.
+          </p>
           <DataTable
             caption="Itemized quote reconciliation against the preserved budget. Partial subtotals are not a revised project estimate."
             columns={[
@@ -1208,7 +1803,7 @@ function InfrastructurePage() {
               { key: "minimum", label: "Minimum unit quote", render: (item) => formatCost(item.summary.minimum) },
               { key: "maximum", label: "Maximum unit quote", render: (item) => formatCost(item.summary.maximum) },
               { key: "averageUnit", label: "Average unit cost", render: (item) => formatCost(item.summary.averageUnitCost) },
-              { key: "averageTotal", label: "Average total cost", render: (item) => formatTotalCost(item.summary) },
+              { key: "averageTotal", label: "Final average total", render: (item) => formatCost(item.cost.finalAverageTotal) },
               { key: "budgetParent", label: "Existing budget parent" },
               { key: "budgetNote", label: "Reconciliation / scope note" },
               { key: "priority", label: "Essential / optional" },
@@ -1357,9 +1952,9 @@ function InfrastructurePage() {
           </div>
           {fileMessage && <p className="tracker-message" role="status">{fileMessage}</p>}
           <p className="note">
-            Reliability rule for averages: a supplier, model, specification, positive quoted unit price, quote date and unexpired validity
-            must be recorded, and status must be Quoted, Selected or Purchased. Average unit cost is (lowest + highest reliable quote) / 2.
-            Average total is that average multiplied by the measured quantity. Expired, incomplete and unverified offers do not contribute.
+            Supplier prices contribute only when supplier, matching product specification, positive unit price, quote date and validity are
+            complete and status is Quoted, Selected or Purchased. The quoted average uses the midpoint of the reliable minimum and maximum.
+            Market estimates and local worker ranges are entered separately in the expanded cost categories; actual purchases remain separate.
           </p>
           <div className="tracker-picker">
             <label>
@@ -1384,14 +1979,16 @@ function InfrastructurePage() {
                   step="any"
                   inputMode="decimal"
                   placeholder="Not yet measured"
-                  value={procurementState.quantities[selectedProcurementItem.id] ?? ""}
+                  value={procurementState.quantities[selectedProcurementItem.id] ?? quantityForItem(selectedProcurementItem) ?? ""}
                   onChange={(event) => updateQuantity(selectedProcurementItem.id, event.target.value)}
                 />
               </label>
-              <p className={selectedCost.reliableQuoteCount ? "quote-cost" : "quote-cost quote-cost-pending"}>
+              <p className={selectedCost.averageUnitCost !== null ? "quote-cost" : "quote-cost quote-cost-pending"}>
                 <strong>Average unit cost: {formatCost(selectedCost.averageUnitCost)}</strong>
                 <span>Minimum: {formatCost(selectedCost.minimum)} · Maximum: {formatCost(selectedCost.maximum)}</span>
-                <span>Average total: {formatTotalCost(selectedCost)} · {selectedCost.status}</span>
+                <span>Average material total: {formatTotalCost(selectedCost)} · {selectedCost.status}</span>
+                <span>Average local labour total: {formatCost(selectedCost.laborTotal)} · Tax/GST: {formatCost(selectedCost.tax)} · Transportation: {formatCost(selectedCost.transport)} · Installation: {formatCost(selectedCost.installation)}</span>
+                <span>Final average total: {formatCost(selectedCost.finalAverageTotal)} · Actual purchase: {formatCost(selectedCost.actualPurchaseTotal)}</span>
               </p>
             </div>
           </div>
@@ -1403,6 +2000,7 @@ function InfrastructurePage() {
                 slot={slot}
                 quote={selectedQuotes[slot] || getBlankQuote()}
                 onChange={updateQuote}
+                quantity={quantityForItem(selectedProcurementItem)}
               />
             ))}
           </div>
