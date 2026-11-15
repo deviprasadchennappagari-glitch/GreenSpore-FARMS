@@ -294,6 +294,57 @@ footer p { margin: 0; color: var(--muted); font-size: .8rem; }
   color: var(--ink);
 }
 .value-card p, .variety-card > p:not(.eyebrow) { color: #526254; }
+.founders-section { background: var(--cream); }
+.founders-section .section-heading { max-width: 760px; }
+.founders-intro { max-width: 650px; margin: 0 auto; color: var(--muted); }
+.founder-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 42px;
+}
+.founder-card {
+  min-height: 250px;
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: var(--white);
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 24px rgba(20, 61, 43, .06);
+  transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+}
+.founder-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(189, 139, 56, .55);
+  box-shadow: 0 15px 32px rgba(20, 61, 43, .12);
+}
+.founder-initials {
+  width: 104px;
+  height: 104px;
+  margin-bottom: 20px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--gold);
+  border-radius: 50%;
+  outline: 5px solid var(--cream-deep);
+  background: var(--green);
+  color: var(--cream);
+  font-family: "Playfair Display", serif;
+  font-size: 2rem;
+  letter-spacing: .04em;
+}
+.founder-photo {
+  display: block;
+  object-fit: cover;
+  object-position: center;
+  outline: 5px solid var(--cream-deep);
+}
+.founder-photo-devi, .founder-photo-babu { object-position: center 25%; }
+.founder-card h3 { margin-bottom: 3px; color: var(--green); }
+.founder-card p { margin: 0; color: var(--gold); font-size: .88rem; font-weight: 700; }
 .card-icon {
   display: block;
   margin-bottom: 22px;
@@ -399,6 +450,9 @@ tbody td { color: #405345; }
   .infrastructure, .two-column, .variety-grid { grid-template-columns: 1fr; gap: 28px; }
   .floor-plan img { max-height: 700px; }
   .timeline, .cards, .process-list { grid-template-columns: 1fr; gap: 22px; }
+  .founder-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 32px; }
+  .founder-card { min-height: 220px; padding: 22px 14px; }
+  .founder-initials { width: 88px; height: 88px; font-size: 1.7rem; }
   .page-hero { padding: 65px 20px 55px; }
   .about-content { padding-bottom: 48px; }
   .values-section { padding-top: 58px; }
@@ -412,4 +466,11 @@ tbody td { color: #405345; }
   .content-block { padding-top: 54px; }
   th, td { padding: 11px 12px; }
   footer { padding: 22px 20px; flex-direction: column; align-items: flex-start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
 }

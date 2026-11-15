@@ -18,7 +18,8 @@ npm test
 
 ## Site pages and assets
 
-- `index.html` — home, facility concept, and roadmap
+- `index.html` — redirects visitors to the About page
+- `home.html` — home, facility concept, and roadmap
 - `about.html` — project overview
 - `mushrooms.html` — Oyster and Milky crop profiles
 - `business-plan.html` — first-harvest and infrastructure estimates
