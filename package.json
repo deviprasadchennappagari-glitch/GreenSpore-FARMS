@@ -1,0 +1,10 @@
+{
+  "name": "greenspore-farms",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GreenSpore Farms partner-facing website",
+  "scripts": {
+    "test": "node --check script.js",
+    "start": "npx serve ."
+  }
+}
