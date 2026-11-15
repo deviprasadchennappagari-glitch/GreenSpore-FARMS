@@ -270,8 +270,8 @@ function InfrastructurePage() {
             measured scope after soil, drainage, climate and room requirements are reviewed.
           </SectionTitle>
           <div className="accordion-stack">
-            {civilWorks.map((group, index) => (
-              <details className="plan-accordion" key={group.title} open={index === 0}>
+            {civilWorks.map((group) => (
+              <details className="plan-accordion" key={group.title}>
                 <summary>{group.title}<span>{group.items.length} work items</span></summary>
                 <DataTable
                   columns={[
@@ -308,8 +308,8 @@ function InfrastructurePage() {
             <span>Decide only after choosing the Oyster strain and measuring hot-season room conditions. A major cold room is excluded from the base budget.</span>
           </div>
           <div className="accordion-stack">
-            {equipmentGroups.map((group, index) => (
-              <details className="plan-accordion" key={group.title} open={index === 0}>
+            {equipmentGroups.map((group) => (
+              <details className="plan-accordion" key={group.title}>
                 <summary>{group.title}<span>{group.items.length} items · prices require quotes</span></summary>
                 <DataTable
                   caption={`${group.title} equipment inventory. All prices require written quotations.`}
