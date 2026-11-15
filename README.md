@@ -24,6 +24,10 @@ The Vite build outputs the React infrastructure page and the existing static pag
 npm test
 ```
 
+The infrastructure plan includes itemized civil/equipment scopes, a measured roof-area calculator, room and environmental equipment schedules, and a three-supplier quote tracker. Cost averages use only complete, current written quotes; unverified prices remain "Quotation Required". The original budget baseline is preserved until the founders approve and reconcile a scope.
+
+Quote data is saved in the current browser and can be shared with founders through tracker JSON export/import. Importing replaces the current browser's tracker; export local data first. GitHub Pages does not provide live shared storage.
+
 ## Site pages and assets
 
 - `index.html` — home, facility concept, and roadmap

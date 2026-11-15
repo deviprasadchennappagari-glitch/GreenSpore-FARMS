@@ -169,11 +169,84 @@
 .infra-disclaimer { padding: 56px max(24px, calc((100% - 1136px) / 2)); color: var(--cream); background: var(--green); }
 .infra-disclaimer p:last-child { margin-bottom: 0; color: #d7e0d9; font-size: .9rem; }
 .infra-footer { max-width: 1240px; }
+.roof-calculator, .room-volume-card, .tracker-item-summary, .quote-slot {
+  border: 1px solid var(--line);
+  background: var(--white);
+}
+.roof-calculator { margin-top: 30px; padding: 22px; }
+.roof-calculator > .note { margin-bottom: 18px; }
+.roof-dimensions, .roof-option-grid, .room-volume-grid, .quote-slots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.roof-dimensions label, .roof-cost-inputs label, .tracker-picker label, .tracker-item-summary label,
+.quote-slot label {
+  display: grid;
+  gap: 5px;
+  color: var(--green);
+  font-size: .82rem;
+  font-weight: 700;
+}
+.roof-dimensions input, .roof-cost-inputs input, .tracker-picker select, .tracker-item-summary input,
+.quote-slot input, .quote-slot select, .quote-slot textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 9px 10px;
+  color: var(--ink);
+  background: #fff;
+  font: inherit;
+  font-size: .9rem;
+}
+.roof-area-result {
+  margin: 18px 0 24px;
+  padding: 13px 15px;
+  background: #f0f3e9;
+  color: var(--green);
+}
+.roof-option-grid { align-items: start; }
+.roof-option-card { min-width: 0; padding: 18px; border: 1px solid var(--line); background: #fff; }
+.roof-option-card h4, .room-volume-card h3 { margin-bottom: 14px; color: var(--green); font-family: "Playfair Display", serif; }
+.roof-cost-inputs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.roof-option-card .quote-cost { margin-top: 15px; }
+.room-volume-grid { margin: 24px 0; }
+.room-volume-card { padding: 18px; }
+.room-volume-card p:last-child { margin-bottom: 0; }
+.compact-input { display: grid; gap: 5px; min-width: 120px; color: var(--green); font-size: .72rem; }
+.compact-input input {
+  width: 120px;
+  max-width: 100%;
+  min-width: 90px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 7px;
+  font: inherit;
+}
+.quote-cost { display: grid; gap: 4px; margin: 10px 0; color: var(--green); }
+.quote-cost strong { font-size: 1rem; }
+.quote-cost span, .plan-accordion small { color: var(--muted); font-size: .78rem; font-weight: 400; }
+.quote-cost-pending strong { color: #8d5a25; }
+.tracker-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 20px 0; }
+.tracker-actions > span { color: var(--muted); font-size: .84rem; }
+.tracker-message { padding: 12px 15px; border-left: 4px solid var(--gold); background: var(--white); color: var(--green); }
+.tracker-picker { display: grid; grid-template-columns: minmax(240px, .7fr) minmax(0, 1.3fr); gap: 16px; margin: 22px 0; }
+.tracker-item-summary { display: grid; gap: 8px; padding: 18px; color: var(--muted); font-size: .86rem; }
+.tracker-item-summary > strong { color: var(--green); font-size: 1.1rem; }
+.tracker-item-summary p { margin-bottom: 0; }
+.quote-slots { align-items: start; margin: 20px 0; }
+.quote-slot { min-width: 0; margin: 0; padding: 16px; }
+.quote-slot legend { padding: 0 6px; color: var(--green); font-weight: 700; }
+.quote-slot > label { margin-bottom: 12px; }
+.quote-slot textarea { resize: vertical; }
+.quote-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
 
 @media (max-width: 980px) {
   .infra-header .site-nav { gap: 12px; font-size: .8rem; }
   .infra-fact-grid { grid-template-columns: repeat(2, 1fr); }
   .layout-grid { grid-template-columns: 1fr; }
+  .tracker-picker { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 760px) {
@@ -187,6 +260,9 @@
   .infra-section { padding: 62px 20px; }
   .infra-section-title { margin-bottom: 26px; }
   .infra-fact-grid, .budget-cards, .status-legend, .biosecurity-grid { grid-template-columns: 1fr; }
+  .roof-option-grid, .room-volume-grid, .quote-slots, .roof-dimensions { grid-template-columns: 1fr; }
+  .roof-calculator, .roof-option-card, .room-volume-card, .quote-slot { padding: 15px; }
+  .roof-cost-inputs, .quote-fields { grid-template-columns: 1fr; }
   .infra-fact-card { min-height: 0; }
   .status-legend { gap: 12px; }
   .layout-figure { padding: 10px; }
